@@ -1,0 +1,57 @@
+---
+import { ui, type Locale } from "../../i18n/ui";
+import ScanPanel from "./ScanPanel.astro";
+
+interface Props {
+  lang: Locale;
+}
+
+const { lang } = Astro.props;
+const t = ui[lang].hero;
+---
+
+<section class="relative overflow-hidden">
+  {/* The column grid, at the edge of perception: order, not pattern. */}
+  <div
+    class="pointer-events-none absolute inset-0 grid-rules opacity-40"
+    aria-hidden="true"
+  >
+  </div>
+
+  <div
+    class="relative mx-auto grid max-w-[1280px] gap-12 px-5 py-16 md:px-8 md:py-24 lg:grid-cols-[1fr_1.15fr] lg:items-center lg:gap-16"
+  >
+    {/* min-w-0: grid items default to min-width:auto, which would let the
+         scan table push the whole track past the viewport on narrow screens. */}
+    <div class="min-w-0">
+      <p class="label text-signal">{t.kicker}</p>
+
+      <h1 class="mt-5 text-display font-semibold">
+        {t.titleLead}
+        <span class="block text-fg-muted">{t.titleTail}</span>
+      </h1>
+
+      <p class="mt-7 max-w-[46ch] text-lede text-fg-muted">{t.lede}</p>
+
+      <dl class="mt-10 flex border-t border-rule">
+        {
+          t.stats.map((stat) => (
+            <div class="flex-1 border-r border-rule pt-4 pr-4 last:border-r-0">
+              <dt class="sr-only">{stat.label}</dt>
+              <dd>
+                <span class="block font-mono text-2xl font-medium tabular-nums tracking-[-0.03em]">
+                  {stat.value}
+                </span>
+                <span class="mt-1 block text-[0.78rem] text-fg-muted">
+                  {stat.label}
+                </span>
+              </dd>
+            </div>
+          ))
+        }
+      </dl>
+    </div>
+
+    <ScanPanel lang={lang} />
+  </div>
+</section>

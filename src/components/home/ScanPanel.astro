@@ -1,0 +1,240 @@
+---
+import { ui, type Locale } from "../../i18n/ui";
+
+interface Props {
+  lang: Locale;
+}
+
+const { lang } = Astro.props;
+const t = ui[lang].scan;
+
+// Handed to the client script as data rather than baked into it, so all
+// copy stays in src/i18n and both locales share one bundle.
+const strings = {
+  scanning: t.scanning,
+  done: t.done,
+  ready: t.ready,
+  resultLabel: t.resultLabel,
+  thirdParty: t.thirdParty,
+  storage: t.storage,
+  more: t.more,
+  cleanHeading: t.cleanHeading,
+  cleanBody: t.cleanBody,
+  errors: t.errors,
+};
+---
+
+<figure class="min-w-0 border border-rule bg-raised" data-scanner>
+  <figcaption class="flex items-center gap-3 border-b border-rule px-4 py-3 md:px-5">
+    <span class="label text-fg-muted">{t.title}</span>
+
+    <span class="ml-auto flex items-center gap-2">
+      <span
+        class="block size-1.5 rounded-full bg-fg-faint"
+        aria-hidden="true"
+        data-scanner-dot></span>
+      <span class="label text-fg-faint" data-scanner-status>{t.ready}</span>
+    </span>
+  </figcaption>
+
+  <form class="flex gap-2 border-b border-rule p-4 md:p-5" data-scanner-form>
+    <label for="scan-url" class="sr-only">{t.urlLabel}</label>
+    <input
+      id="scan-url"
+      name="url"
+      type="text"
+      inputmode="url"
+      autocomplete="url"
+      spellcheck="false"
+      required
+      placeholder={t.placeholder}
+      class="min-w-0 flex-1 border border-rule bg-ground px-3 py-2.5 font-mono text-data text-fg placeholder:text-fg-faint focus-visible:border-signal"
+      data-scanner-input
+    />
+    <button
+      type="submit"
+      class="label shrink-0 bg-signal px-4 py-2.5 font-medium text-signal-ink transition-colors hover:bg-[oklch(0.84_0.13_180)] disabled:opacity-50"
+      data-scanner-submit
+    >
+      {t.submit}
+    </button>
+  </form>
+
+  {/* Idle / result / error all live here; the script swaps which is shown. */}
+  <div data-scanner-idle>
+    <p class="px-4 py-8 text-center text-[0.85rem] text-fg-muted md:px-5">
+      {t.idleHint}
+    </p>
+    <noscript>
+      <p class="border-t border-rule px-4 py-3 text-[0.8rem] text-warn md:px-5">
+        {t.noscript}
+      </p>
+    </noscript>
+  </div>
+
+  <div hidden data-scanner-output aria-live="polite"></div>
+
+  <p class="border-t border-rule px-4 py-3 text-[0.78rem] text-fg-faint md:px-5">
+    {t.note}
+  </p>
+</figure>
+
+{/* A data blob, not a module — inline is correct here. */}
+<script is:inline type="application/json" data-scanner-strings set:html={JSON.stringify(strings)} />
+
+<script>
+  interface ScanCookie {
+    name: string;
+    domain: string;
+    expiry: string;
+    thirdParty: boolean;
+  }
+
+  interface ScanResult {
+    url: string;
+    durationMs: number;
+    cookieCount: number;
+    thirdPartyCount: number;
+    storageCount: number;
+    cookies: ScanCookie[];
+  }
+
+  const root = document.querySelector<HTMLElement>("[data-scanner]");
+  if (root) {
+    const form = root.querySelector<HTMLFormElement>("[data-scanner-form]")!;
+    const input = root.querySelector<HTMLInputElement>("[data-scanner-input]")!;
+    const submit = root.querySelector<HTMLButtonElement>("[data-scanner-submit]")!;
+    const status = root.querySelector<HTMLElement>("[data-scanner-status]")!;
+    const dot = root.querySelector<HTMLElement>("[data-scanner-dot]")!;
+    const idle = root.querySelector<HTMLElement>("[data-scanner-idle]")!;
+    const output = root.querySelector<HTMLElement>("[data-scanner-output]")!;
+
+    const strings = JSON.parse(
+      root.parentElement?.querySelector("[data-scanner-strings]")?.textContent ??
+        document.querySelector("[data-scanner-strings]")?.textContent ??
+        "{}",
+    );
+
+    const escape = (value: string) =>
+      value.replace(
+        /[&<>"']/g,
+        (c) =>
+          ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
+            c
+          ]!,
+      );
+
+    function setState(state: "ready" | "busy" | "done" | "error") {
+      const dotClass = {
+        ready: "bg-fg-faint",
+        busy: "bg-warn motion-safe:animate-pulse",
+        done: "bg-signal",
+        error: "bg-crit",
+      }[state];
+
+      dot.className = `block size-1.5 rounded-full ${dotClass}`;
+
+      const textClass = {
+        ready: "text-fg-faint",
+        busy: "text-warn",
+        done: "text-signal",
+        error: "text-crit",
+      }[state];
+
+      status.className = `label ${textClass}`;
+    }
+
+    function renderError(code: string) {
+      const message = strings.errors?.[code] ?? strings.errors?.failed ?? "Error";
+      idle.hidden = true;
+      output.hidden = false;
+      output.innerHTML = `<p class="px-4 py-6 text-[0.85rem] text-crit md:px-5" role="alert">${escape(message)}</p>`;
+      setState("error");
+      status.textContent = strings.ready;
+    }
+
+    function renderResult(data: ScanResult) {
+      idle.hidden = true;
+      output.hidden = false;
+      setState("done");
+      status.textContent = `${strings.done} · ${(data.durationMs / 1000)
+        .toFixed(1)
+        .replace(".", ",")} s`;
+
+      if (data.cookieCount === 0) {
+        output.innerHTML = `
+          <div class="px-4 py-6 md:px-5">
+            <p class="font-mono text-[1.15rem] text-signal">${escape(strings.cleanHeading)}</p>
+            <p class="mt-2 text-[0.82rem] text-fg-muted">${escape(strings.cleanBody)}</p>
+          </div>`;
+        return;
+      }
+
+      const remaining = data.cookieCount - data.cookies.length;
+
+      const rows = data.cookies
+        .map(
+          (cookie) => `
+            <li class="flex items-baseline gap-4 border-b border-rule px-4 py-3 md:px-5">
+              <span class="w-24 shrink-0 truncate text-fg">${escape(cookie.name)}</span>
+              <span class="min-w-0 flex-1 truncate text-fg-muted">${escape(cookie.domain)}</span>
+              <span class="shrink-0 tabular-nums text-fg-muted">${escape(cookie.expiry)}</span>
+            </li>`,
+        )
+        .join("");
+
+      const moreRow =
+        remaining > 0
+          ? `<li class="flex items-center gap-2 border-b border-rule px-4 py-3 text-fg-faint md:px-5">
+               <span aria-hidden="true">…</span><span>+${remaining} ${escape(strings.more)}</span>
+             </li>`
+          : "";
+
+      output.innerHTML = `
+        <div class="border-b border-rule px-4 py-5 md:px-5">
+          <div class="flex items-baseline gap-3">
+            <span class="font-mono text-[3.25rem] font-medium leading-none tabular-nums text-crit">${data.cookieCount}</span>
+            <span class="label text-fg-muted">${escape(strings.resultLabel)}</span>
+          </div>
+          <p class="mt-3 text-[0.8rem] text-fg-faint">
+            ${data.thirdPartyCount} ${escape(strings.thirdParty)} · ${data.storageCount} ${escape(strings.storage)}
+          </p>
+        </div>
+        <ul class="font-mono text-data">${rows}${moreRow}</ul>`;
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const url = input.value.trim();
+      if (!url) return;
+
+      submit.disabled = true;
+      setState("busy");
+      status.textContent = strings.scanning;
+      idle.hidden = true;
+      output.hidden = false;
+      output.innerHTML = `<p class="px-4 py-8 text-center text-[0.85rem] text-fg-muted md:px-5">${escape(strings.scanning)}</p>`;
+
+      try {
+        const response = await fetch("/api/scan", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ url }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          renderError(typeof data?.error === "string" ? data.error : "failed");
+        } else {
+          renderResult(data as ScanResult);
+        }
+      } catch {
+        renderError("failed");
+      } finally {
+        submit.disabled = false;
+      }
+    });
+  }
+</script>

@@ -1,0 +1,47 @@
+---
+import { ui, routes, type Locale } from "../../i18n/ui";
+
+interface Props {
+  lang: Locale;
+}
+
+const { lang } = Astro.props;
+const t = ui[lang];
+const r = routes[lang];
+const year = new Date().getFullYear();
+---
+
+<footer class="border-t border-rule">
+  <div
+    class="mx-auto flex max-w-[1280px] flex-col gap-6 px-5 py-10 md:flex-row md:items-baseline md:justify-between md:px-8"
+  >
+    <div class="flex flex-col gap-2">
+      <span class="font-mono text-sm font-bold tracking-[-0.02em]">
+        data<span class="text-signal">pip</span>
+      </span>
+      <span class="label text-fg-faint">{t.footer.tagline}</span>
+    </div>
+
+    <ul class="flex flex-wrap items-center gap-x-6 gap-y-2">
+      <li>
+        <a
+          href={`/${lang}/${r.imprint}/`}
+          class="label text-fg-muted transition-colors hover:text-fg"
+        >
+          {t.footer.imprint}
+        </a>
+      </li>
+      <li>
+        <a
+          href={`/${lang}/${r.privacy}/`}
+          class="label text-fg-muted transition-colors hover:text-fg"
+        >
+          {t.footer.privacy}
+        </a>
+      </li>
+      <li class="label text-fg-faint">
+        &copy; {year} datapip. {t.footer.rights}
+      </li>
+    </ul>
+  </div>
+</footer>

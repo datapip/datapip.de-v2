@@ -1,0 +1,33 @@
+---
+// On demand so the locale can be read from the URL that was actually
+// requested — a prerendered 404 has no way to know.
+export const prerender = false;
+
+import Base from "../layouts/Base.astro";
+import { ui, isLocale, defaultLocale, type Locale } from "../i18n/ui";
+
+const first = Astro.url.pathname.split("/").filter(Boolean)[0];
+const lang: Locale = isLocale(first) ? first : defaultLocale;
+const t = ui[lang].notFound;
+
+Astro.response.status = 404;
+---
+
+<Base lang={lang} title={t.title} description={t.body} noindex>
+  <section class="mx-auto max-w-[1280px] px-5 py-24 md:px-8 md:py-32">
+    <div class="max-w-[52ch]">
+      <p class="label text-crit">{t.code}</p>
+
+      <h1 class="mt-4 text-h2 font-semibold">{t.heading}</h1>
+
+      <p class="mt-5 text-lede text-fg-muted">{t.body}</p>
+
+      <a
+        href={`/${lang}/`}
+        class="label mt-10 inline-block bg-signal px-5 py-3 font-medium text-signal-ink transition-colors hover:bg-[oklch(0.84_0.13_180)]"
+      >
+        {t.cta}
+      </a>
+    </div>
+  </section>
+</Base>

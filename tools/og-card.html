@@ -1,0 +1,74 @@
+<style>
+  @import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&family=JetBrains+Mono:wght@400;700&display=swap");
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    width: 1200px;
+    height: 630px;
+    background: #0c0e11;
+    color: #e9ecef;
+    font-family: "IBM Plex Sans", sans-serif;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 68px 72px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* the column grid, same device as the site */
+  .rules {
+    position: absolute; inset: 0;
+    background-image: linear-gradient(to right, rgba(120,132,148,.16) 1px, transparent 1px);
+    background-size: calc(100% / 12) 100%;
+  }
+
+  .row { position: relative; display: flex; align-items: center; justify-content: space-between; }
+
+  .logo { font-family: "JetBrains Mono", monospace; font-weight: 700; font-size: 30px; letter-spacing: -.02em; }
+  .logo b { color: #5ce0d0; font-weight: 700; }
+
+  .kicker {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 17px; letter-spacing: .16em; text-transform: uppercase; color: #5ce0d0;
+  }
+
+  h1 {
+    position: relative;
+    font-size: 82px; font-weight: 600; line-height: 1.0; letter-spacing: -.035em;
+    margin-top: 26px;
+  }
+  h1 span { display: block; color: #99a4b2; }
+
+  .stats { position: relative; display: flex; border-top: 1px solid #2b3139; padding-top: 22px; gap: 0; }
+  .stat { flex: 1; border-right: 1px solid #2b3139; padding-right: 28px; }
+  .stat:last-child { border-right: 0; }
+  .stat b { display: block; font-family: "JetBrains Mono", monospace; font-size: 34px; font-weight: 400; letter-spacing: -.03em; }
+  .stat.wide { flex: 1.5; }
+  .stat.wide b { font-size: 22px; line-height: 1.5; }
+  .stat span { display: block; margin-top: 6px; font-size: 17px; color: #99a4b2; }
+
+  .chip {
+    font-family: "JetBrains Mono", monospace; font-size: 15px; letter-spacing: .06em;
+    border: 1px solid #5ce0d0; color: #5ce0d0; padding: 7px 14px; text-transform: uppercase;
+  }
+</style>
+
+<div class="rules"></div>
+
+<div class="row">
+  <span class="logo">data<b>pip</b></span>
+  <span class="chip">DSGVO &amp; TDDDG</span>
+</div>
+
+<div>
+  <p class="kicker">Philipp Jäckle</p>
+  <h1>Privacy-Focused<span>Digital Analyst</span></h1>
+</div>
+
+<div class="stats">
+  <div class="stat"><b>10+</b><span>Jahre Erfahrung</span></div>
+  <div class="stat"><b>3</b><span>Eigene Tools</span></div>
+  <div class="stat wide"><b>client · server · cookieless</b><span>Tracking-Setups</span></div>
+</div>

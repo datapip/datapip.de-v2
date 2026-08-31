@@ -1,0 +1,45 @@
+---
+import { sections, routes, ui, type Locale } from "../../i18n/ui";
+import { portfolio } from "../../i18n/portfolio";
+
+interface Props {
+  lang: Locale;
+}
+
+const { lang } = Astro.props;
+const t = portfolio[lang].contact;
+const id = sections[lang].contact;
+const contactHref = `/${lang}/${routes[lang].contact}/`;
+const alternative = ui[lang].contactPage.alternative;
+---
+
+<section id={id} class="scroll-mt-14 border-t border-rule bg-ground-deep">
+  <div class="mx-auto max-w-[1280px] px-5 py-16 md:px-8 md:py-24">
+    <div class="max-w-[54ch]">
+      <p class="label text-signal">{t.eyebrow}</p>
+
+      <h2 class="mt-4 text-h2 font-semibold">{t.heading}</h2>
+
+      <p class="mt-5 text-lede text-fg-muted">{t.lede}</p>
+
+      <div class="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3">
+        <a
+          href={contactHref}
+          class="label bg-signal px-5 py-3 font-medium text-signal-ink transition-colors hover:bg-[oklch(0.84_0.13_180)]"
+        >
+          {t.cta}
+        </a>
+
+        <span class="text-[0.9rem] text-fg-muted">
+          {alternative}{" "}
+          <a
+            href={`mailto:${t.email}`}
+            class="font-mono text-data text-fg-muted underline-offset-4 transition-colors hover:text-signal hover:underline"
+          >
+            {t.email}
+          </a>
+        </span>
+      </div>
+    </div>
+  </div>
+</section>

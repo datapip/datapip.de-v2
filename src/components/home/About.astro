@@ -1,0 +1,80 @@
+---
+import Section from "../Section.astro";
+import { sections, type Locale } from "../../i18n/ui";
+import { portfolio } from "../../i18n/portfolio";
+
+interface Props {
+  lang: Locale;
+}
+
+const { lang } = Astro.props;
+const t = portfolio[lang].about;
+const id = sections[lang].about;
+---
+
+<Section id={id} eyebrow={t.eyebrow} heading={t.heading}>
+  <div class="grid gap-12 lg:grid-cols-[1fr_1.6fr] lg:gap-16">
+    <div class="flex flex-col gap-5">
+      {t.body.map((paragraph) => <p class="text-fg-muted">{paragraph}</p>)}
+    </div>
+
+    {/* The CV as a data table rather than a decorated timeline: the
+         same information, scannable in one pass. */}
+    <div class="min-w-0">
+      <p class="label mb-4 text-fg-faint">{t.tableLabel}</p>
+
+      <div
+        class="overflow-x-auto border-t border-rule focus-visible:outline-2 focus-visible:outline-signal"
+        tabindex="0"
+        role="region"
+        aria-label={t.tableLabel}
+      >
+        <table class="w-full min-w-[36rem] border-collapse text-left">
+          <caption class="sr-only">{t.tableLabel}</caption>
+          <thead>
+            <tr>
+              <th scope="col" class="label py-3 pr-6 font-normal text-fg-faint">
+                {t.columns.period}
+              </th>
+              <th scope="col" class="label py-3 pr-6 font-normal text-fg-faint">
+                {t.columns.role}
+              </th>
+              <th scope="col" class="label py-3 font-normal text-fg-faint">
+                {t.columns.company}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {
+              t.roles.map((role) => (
+                <tr class="border-t border-rule align-top">
+                  <td class="py-5 pr-6 font-mono text-data tabular-nums whitespace-nowrap text-fg-muted">
+                    {role.period}
+                  </td>
+                  <td class="py-5 pr-6">
+                    <span class="block text-[0.95rem] font-medium">
+                      {role.title}
+                    </span>
+                    <span class="mt-2 block max-w-[42ch] text-[0.86rem] text-fg-muted">
+                      {role.description}
+                    </span>
+                    <span class="mt-3 flex flex-wrap gap-1.5">
+                      {role.technologies.map((tech) => (
+                        <span class="border border-rule px-1.5 py-0.5 font-mono text-[0.68rem] text-fg-faint">
+                          {tech}
+                        </span>
+                      ))}
+                    </span>
+                  </td>
+                  <td class="py-5 text-[0.9rem] text-fg-muted">
+                    {role.company}
+                  </td>
+                </tr>
+              ))
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</Section>

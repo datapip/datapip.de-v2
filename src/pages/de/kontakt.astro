@@ -1,0 +1,67 @@
+---
+// Handles its own POST so the form works with JavaScript disabled.
+export const prerender = false;
+
+import Base from "../../layouts/Base.astro";
+import ContactForm from "../../components/ContactForm.astro";
+import { ui } from "../../i18n/ui";
+import { portfolio } from "../../i18n/portfolio";
+import { handleContactSubmission, type ContactResult } from "../../lib/contact";
+
+const lang = "de" as const;
+const t = ui[lang].contactPage;
+const email = portfolio[lang].contact.email;
+
+let result: ContactResult | null = null;
+
+if (Astro.request.method === "POST") {
+  result = await handleContactSubmission(await Astro.request.formData(), lang);
+  if (result.status === "error") Astro.response.status = 422;
+}
+
+const sent = result?.status === "success";
+---
+
+<Base lang={lang} title={t.title} description={t.description}>
+  <section class="mx-auto max-w-[1280px] px-5 py-16 md:px-8 md:py-24">
+    {
+      sent ? (
+        <div class="max-w-[52ch]">
+          <p class="label text-signal">{t.eyebrow}</p>
+          <h1 class="mt-4 text-h2 font-semibold">{t.success.heading}</h1>
+          <p class="mt-5 text-lede text-fg-muted">{t.success.body}</p>
+          <a
+            href={`/${lang}/`}
+            class="label mt-10 inline-block border border-rule px-5 py-3 text-fg-muted transition-colors hover:border-rule-strong hover:text-fg"
+          >
+            {t.success.back}
+          </a>
+        </div>
+      ) : (
+        <>
+          <div class="max-w-[52ch]">
+            <p class="label text-signal">{t.eyebrow}</p>
+            <h1 class="mt-4 text-h2 font-semibold">{t.heading}</h1>
+            <p class="mt-5 text-lede text-fg-muted">{t.lede}</p>
+          </div>
+
+          <ContactForm
+            lang={lang}
+            errors={result?.status === "error" ? result.errors : undefined}
+            values={result?.status === "error" ? result.values : undefined}
+          />
+
+          <p class="mt-10 border-t border-rule pt-6 text-[0.9rem] text-fg-muted">
+            {t.alternative}{" "}
+            <a
+              href={`mailto:${email}`}
+              class="font-mono text-data text-signal underline-offset-4 hover:underline"
+            >
+              {email}
+            </a>
+          </p>
+        </>
+      )
+    }
+  </section>
+</Base>

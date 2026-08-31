@@ -1,0 +1,33 @@
+---
+// Rendered on demand: the target depends on the request's Accept-Language,
+// which is what the v1 middleware used to decide between /de and /en.
+export const prerender = false;
+
+import { locales, defaultLocale, type Locale } from "../i18n/ui";
+
+function preferredLocale(header: string | null): Locale {
+  if (!header) return defaultLocale;
+
+  const ranked = header
+    .split(",")
+    .map((part) => {
+      const [tag, quality] = part.trim().split(";q=");
+      return { tag: tag.toLowerCase(), q: quality ? Number(quality) : 1 };
+    })
+    .filter((entry) => entry.tag.length > 0 && !Number.isNaN(entry.q))
+    .sort((a, b) => b.q - a.q);
+
+  for (const { tag } of ranked) {
+    const base = tag.split("-")[0];
+    if ((locales as readonly string[]).includes(base)) {
+      return base as Locale;
+    }
+  }
+
+  return defaultLocale;
+}
+
+const lang = preferredLocale(Astro.request.headers.get("accept-language"));
+
+return Astro.redirect(`/${lang}/`, 302);
+---

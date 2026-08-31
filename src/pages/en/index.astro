@@ -1,0 +1,20 @@
+---
+import Base from "../../layouts/Base.astro";
+import Hero from "../../components/home/Hero.astro";
+import Services from "../../components/home/Services.astro";
+import Testimonials from "../../components/home/Testimonials.astro";
+import Projects from "../../components/home/Projects.astro";
+import About from "../../components/home/About.astro";
+import Contact from "../../components/home/Contact.astro";
+
+const lang = "en" as const;
+---
+
+<Base lang={lang}>
+  <Hero lang={lang} />
+  <Services lang={lang} />
+  <Testimonials lang={lang} />
+  <Projects lang={lang} />
+  <About lang={lang} />
+  <Contact lang={lang} />
+</Base>

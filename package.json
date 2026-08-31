@@ -1,0 +1,36 @@
+{
+  "name": "datapip-de-v2",
+  "version": "0.1.0",
+  "description": "Bilingual portfolio site for datapip.de — Astro 7, Tailwind 4.",
+  "private": true,
+  "license": "UNLICENSED",
+  "author": "Philipp Jäckle",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro",
+    "check": "astro check"
+  },
+  "dependencies": {
+    "@astrojs/node": "^11.1.4",
+    "@astrojs/sitemap": "^3.7.3",
+    "@tailwindcss/vite": "^4.3.3",
+    "astro": "^7.2.9",
+    "nodemailer": "^9.0.6",
+    "playwright": "^1.62.1",
+    "tailwindcss": "^4.3.3"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.10",
+    "@types/nodemailer": "^8.0.1",
+    "typescript": "^6.0.3"
+  },
+  "allowScripts": {
+    "esbuild": true
+  }
+}

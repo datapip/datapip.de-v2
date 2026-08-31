@@ -1,0 +1,142 @@
+---
+import { ui, type Locale } from "../i18n/ui";
+import type { ContactErrors, ContactValues } from "../lib/contact";
+
+interface Props {
+  lang: Locale;
+  errors?: ContactErrors;
+  values?: ContactValues;
+}
+
+const { lang, errors = {}, values } = Astro.props;
+const t = ui[lang].contactPage;
+
+const field =
+  "mt-2 w-full border border-rule bg-raised px-3 py-2.5 text-[0.95rem] text-fg " +
+  "placeholder:text-fg-faint focus-visible:border-signal";
+const invalid = "border-crit";
+---
+
+<form method="POST" novalidate class="mt-10 flex max-w-[46rem] flex-col gap-6">
+  {
+    errors.form && (
+      <p
+        role="alert"
+        class="border border-crit bg-crit/10 px-4 py-3 text-[0.9rem] text-crit"
+      >
+        {errors.form}
+      </p>
+    )
+  }
+
+  <div class="grid gap-6 md:grid-cols-2">
+    <div>
+      <label for="name" class="label text-fg-muted">
+        {t.fields.name}
+        <span class="text-crit" aria-hidden="true">*</span>
+      </label>
+      <input
+        id="name"
+        name="name"
+        type="text"
+        required
+        autocomplete="name"
+        value={values?.name ?? ""}
+        aria-describedby={errors.name ? "name-error" : undefined}
+        aria-invalid={errors.name ? "true" : undefined}
+        class={`${field} ${errors.name ? invalid : ""}`}
+      />
+      {
+        errors.name && (
+          <p id="name-error" class="mt-2 text-[0.82rem] text-crit">
+            {errors.name}
+          </p>
+        )
+      }
+    </div>
+
+    <div>
+      <label for="email" class="label text-fg-muted">
+        {t.fields.email}
+        <span class="text-crit" aria-hidden="true">*</span>
+      </label>
+      <input
+        id="email"
+        name="email"
+        type="email"
+        required
+        autocomplete="email"
+        inputmode="email"
+        value={values?.email ?? ""}
+        aria-describedby={errors.email ? "email-error" : undefined}
+        aria-invalid={errors.email ? "true" : undefined}
+        class={`${field} ${errors.email ? invalid : ""}`}
+      />
+      {
+        errors.email && (
+          <p id="email-error" class="mt-2 text-[0.82rem] text-crit">
+            {errors.email}
+          </p>
+        )
+      }
+    </div>
+  </div>
+
+  <div>
+    <label for="subject" class="label text-fg-muted">
+      {t.fields.subject}
+      <span class="ml-2 text-fg-faint">{t.hints.subject}</span>
+    </label>
+    <input
+      id="subject"
+      name="subject"
+      type="text"
+      value={values?.subject ?? ""}
+      class={field}
+    />
+  </div>
+
+  <div>
+    <label for="message" class="label text-fg-muted">
+      {t.fields.message}
+      <span class="text-crit" aria-hidden="true">*</span>
+      <span class="ml-2 text-fg-faint">{t.hints.message}</span>
+    </label>
+    <textarea
+      id="message"
+      name="message"
+      rows="7"
+      required
+      minlength="20"
+      aria-describedby={errors.message ? "message-error" : undefined}
+      aria-invalid={errors.message ? "true" : undefined}
+      class={`${field} resize-y font-sans`}>{values?.message ?? ""}</textarea>
+    {
+      errors.message && (
+        <p id="message-error" class="mt-2 text-[0.82rem] text-crit">
+          {errors.message}
+        </p>
+      )
+    }
+  </div>
+
+  {/* Honeypot. Hidden from people and from assistive tech; bots fill it in. */}
+  <div class="hidden" aria-hidden="true">
+    <label for="company">Company</label>
+    <input id="company" name="company" type="text" tabindex="-1" autocomplete="off" />
+  </div>
+
+  <div class="flex flex-wrap items-center gap-x-5 gap-y-3">
+    <button
+      type="submit"
+      class="label bg-signal px-5 py-3 font-medium text-signal-ink transition-colors hover:bg-[oklch(0.84_0.13_180)]"
+    >
+      {t.submit}
+    </button>
+
+    <p class="text-[0.8rem] text-fg-faint">
+      <span class="text-crit" aria-hidden="true">*</span>
+      {t.required}
+    </p>
+  </div>
+</form>

@@ -1,0 +1,99 @@
+---
+import "../styles/global.css";
+import { Font } from "astro:assets";
+import Nav from "../components/layout/Nav.astro";
+import Footer from "../components/layout/Footer.astro";
+import { ui, switchLocalePath, type Locale } from "../i18n/ui";
+
+interface Props {
+  lang: Locale;
+  title?: string;
+  description?: string;
+  noindex?: boolean;
+}
+
+const { lang, title, description, noindex = false } = Astro.props;
+const t = ui[lang];
+
+const pageTitle = title ?? t.meta.title;
+const pageDescription = description ?? t.meta.description;
+
+const canonical = new URL(Astro.url.pathname, Astro.site).href;
+const deHref = new URL(switchLocalePath(Astro.url.pathname, "de"), Astro.site).href;
+const enHref = new URL(switchLocalePath(Astro.url.pathname, "en"), Astro.site).href;
+const ogImage = new URL("/static/og/datapip-og.png", Astro.site).href;
+---
+
+<!doctype html>
+<html lang={lang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+
+    {/* Emits the @font-face CSS plus <link rel="preload"> for the faces
+        actually used above the fold, so text paints once. */}
+    <Font cssVariable="--font-ibm-plex-sans" preload />
+    <Font cssVariable="--font-jetbrains-mono" preload />
+
+    <title>{pageTitle}</title>
+    <meta name="description" content={pageDescription} />
+    <link rel="canonical" href={canonical} />
+    {noindex && <meta name="robots" content="noindex, follow" />}
+
+    <link rel="alternate" hreflang="de" href={deHref} />
+    <link rel="alternate" hreflang="en" href={enHref} />
+    <link rel="alternate" hreflang="x-default" href={deHref} />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="datapip.de" />
+    <meta property="og:locale" content={t.ogLocale} />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={pageDescription} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={t.meta.ogImageAlt} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content={ogImage} />
+
+    <meta name="theme-color" content="#0c0e11" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/static/og/apple-touch-icon.png" />
+
+    {/* Self-hosted Umami on the site's own subdomain. Cookieless, so it
+        stores nothing on the device and needs no consent gate — the
+        reasoning is recorded in CLAUDE.md step 6. Skipped in dev, and
+        `data-domains` is a second guard so a staging host cannot write
+        into the production dataset. */}
+    {
+      import.meta.env.PROD && (
+        <script
+          is:inline
+          defer
+          src="https://measure.datapip.de/script.js"
+          data-website-id="03eb767f-f083-4635-8c0a-1a678b5dbe8e"
+          data-domains="datapip.de"
+        />
+      )
+    }
+  </head>
+
+  <body class="min-h-screen flex flex-col">
+    <a
+      href="#main"
+      class="label sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-50 focus:bg-signal focus:text-signal-ink focus:px-3 focus:py-2"
+    >
+      {t.nav.skipToContent}
+    </a>
+
+    <Nav lang={lang} />
+
+    <main id="main" class="flex-1">
+      <slot />
+    </main>
+
+    <Footer lang={lang} />
+  </body>
+</html>

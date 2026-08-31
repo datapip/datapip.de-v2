@@ -1,0 +1,24 @@
+---
+interface Props {
+  id: string;
+  eyebrow: string;
+  heading: string;
+  lede?: string;
+}
+
+const { id, eyebrow, heading, lede } = Astro.props;
+---
+
+<section id={id} class="border-t border-rule scroll-mt-14">
+  <div class="mx-auto max-w-[1280px] px-5 py-16 md:px-8 md:py-24">
+    <header class="max-w-[62ch]">
+      <p class="label text-signal">{eyebrow}</p>
+      <h2 class="mt-4 text-h2 font-semibold">{heading}</h2>
+      {lede && <p class="mt-5 text-lede text-fg-muted">{lede}</p>}
+    </header>
+
+    <div class="mt-12 md:mt-16">
+      <slot />
+    </div>
+  </div>
+</section>

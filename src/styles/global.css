@@ -1,0 +1,146 @@
+@import "tailwindcss";
+
+/* Fonts are declared in astro.config.mjs and injected by <Font /> in
+   Base.astro, which also emits the preload links. Self-hosted and subset
+   to latin + latin-ext: a privacy-focused site calling a font CDN would
+   undercut its own pitch. */
+
+/* ============================================================
+   INSTRUMENT - design tokens
+
+   Dark-committed. Colour carries meaning and nothing else:
+   `signal` marks pass + interactive, `warn` and `crit` appear
+   only inside tool output. Nothing is coloured decoratively.
+
+   Adding a light theme later is a second token block, not a
+   refactor - every component reads these variables, never a
+   literal colour.
+   ============================================================ */
+@theme {
+  /* ground -> raised -> rules */
+  --color-ground: oklch(0.145 0.006 250);
+  --color-ground-deep: oklch(0.112 0.006 250);
+  --color-raised: oklch(0.196 0.007 250);
+  --color-rule: oklch(0.268 0.010 252);
+  --color-rule-strong: oklch(0.360 0.012 252);
+
+  /* ink */
+  /* Every ink tier clears WCAG AA (4.5:1) on ground, ground-deep AND
+     raised — checked, not eyeballed. Ratios below are against `raised`,
+     the lightest ground, so they are the worst case. All three tiers
+     carry small text (labels, table headers, tags), so none of them may
+     be treated as large-text-only. Lowering any L breaks AA. */
+  --color-fg: oklch(0.925 0.004 250); /* 14.6:1 */
+  --color-fg-muted: oklch(0.720 0.016 250); /*  7.4:1 */
+  --color-fg-faint: oklch(0.600 0.014 250); /*  4.6:1 */
+
+  /* state - the only colours in the system */
+  --color-signal: oklch(0.780 0.135 180);
+  --color-signal-ink: oklch(0.190 0.045 180);
+  --color-warn: oklch(0.795 0.140 70);
+  --color-crit: oklch(0.690 0.185 27);
+
+  --font-sans: var(--font-ibm-plex-sans);
+  --font-mono: var(--font-jetbrains-mono);
+
+  /* Fluid type scale. Large type is spent in exactly one place per
+     screen; everything else stays small and dense. */
+  --text-display: clamp(2.5rem, 1.35rem + 4.6vw, 5rem);
+  --text-display--line-height: 0.98;
+  --text-display--letter-spacing: -0.035em;
+
+  --text-h2: clamp(1.75rem, 1.3rem + 1.8vw, 2.75rem);
+  --text-h2--line-height: 1.05;
+  --text-h2--letter-spacing: -0.028em;
+
+  --text-h3: clamp(1.0625rem, 1rem + 0.3vw, 1.25rem);
+  --text-h3--line-height: 1.25;
+  --text-h3--letter-spacing: -0.012em;
+
+  --text-lede: clamp(1rem, 0.95rem + 0.32vw, 1.15rem);
+  --text-lede--line-height: 1.6;
+
+  --text-label: 0.6875rem;
+  --text-label--line-height: 1.45;
+  --text-label--letter-spacing: 0.14em;
+
+  --text-data: 0.8125rem;
+  --text-data--line-height: 1.5;
+}
+
+/* Mono is structural here, not ornamental: every eyebrow, metric,
+   table header and status chip. Used often enough to earn a utility. */
+@utility label {
+  font-family: var(--font-mono);
+  font-size: var(--text-label);
+  line-height: var(--text-label--line-height);
+  letter-spacing: var(--text-label--letter-spacing);
+  text-transform: uppercase;
+}
+
+/* The visible column grid - the direction's structural signature.
+   Deliberately at the edge of perception; it should register as
+   order, not as a pattern. */
+@utility grid-rules {
+  background-image: linear-gradient(
+    to right,
+    color-mix(in oklab, var(--color-rule) 55%, transparent) 1px,
+    transparent 1px
+  );
+  background-size: calc(100% / 6) 100%;
+}
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html {
+    background-color: var(--color-ground);
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-ground);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-signal);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  ::selection {
+    background-color: var(--color-signal);
+    color: var(--color-signal-ink);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}

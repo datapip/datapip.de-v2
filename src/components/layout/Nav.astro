@@ -1,0 +1,111 @@
+---
+import { ui, sections, routes, switchLocalePath, type Locale } from "../../i18n/ui";
+
+interface Props {
+  lang: Locale;
+}
+
+const { lang } = Astro.props;
+const t = ui[lang];
+const anchors = sections[lang];
+const r = routes[lang];
+
+const other: Locale = lang === "de" ? "en" : "de";
+const otherHref = switchLocalePath(Astro.url.pathname, other);
+
+const links = t.nav.links.map((link) => ({
+  label: link.label,
+  href: `/${lang}/#${anchors[link.key as keyof typeof anchors]}`,
+}));
+---
+
+<header class="sticky top-0 z-40 border-b border-rule bg-ground">
+  <nav
+    class="mx-auto flex h-14 max-w-[1280px] items-center gap-4 px-5 md:px-8"
+    aria-label={t.nav.navLabel}
+  >
+    <a
+      href={`/${lang}/`}
+      class="font-mono text-[0.95rem] font-bold tracking-[-0.02em] text-fg"
+    >
+      data<span class="text-signal">pip</span>
+    </a>
+
+    {/* Desktop: links inline. */}
+    <ul class="ml-2 hidden flex-1 items-center gap-6 md:flex">
+      {
+        links.map((link) => (
+          <li>
+            <a
+              href={link.href}
+              class="label text-fg-muted transition-colors hover:text-fg"
+            >
+              {link.label}
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+
+    <div class="ml-auto flex shrink-0 items-center gap-3">
+      <a
+        href={otherHref}
+        hreflang={other}
+        aria-label={t.nav.languageLabel}
+        class="label border border-rule px-2 py-1 text-fg-muted transition-colors hover:border-rule-strong hover:text-fg"
+      >
+        {other}
+      </a>
+
+      <a
+        href={`/${lang}/${r.contact}/`}
+        class="label bg-signal px-3 py-2 font-medium text-signal-ink transition-colors hover:bg-[oklch(0.84_0.13_180)]"
+      >
+        {t.nav.cta}
+      </a>
+
+      {/* Mobile: a real disclosure menu. Navigation must never hide
+          destinations behind a horizontal scroll gesture. <details> gives
+          us correct expanded/collapsed semantics with no JavaScript. */}
+      <details class="nav-menu relative md:hidden">
+        <summary
+          class="label flex cursor-pointer list-none items-center gap-2 border border-rule px-2 py-1 text-fg-muted marker:hidden [&::-webkit-details-marker]:hidden"
+        >
+          <span class="nav-menu-open">{t.nav.menuLabel}</span>
+          <span class="nav-menu-close hidden">{t.nav.menuClose}</span>
+        </summary>
+
+        <ul
+          class="absolute right-0 top-[calc(100%+0.6rem)] z-50 flex w-52 flex-col border border-rule bg-raised"
+        >
+          {
+            links.map((link) => (
+              <li class="border-b border-rule last:border-b-0">
+                <a
+                  href={link.href}
+                  class="label block px-4 py-3 text-fg-muted transition-colors hover:bg-ground hover:text-fg"
+                >
+                  {link.label}
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      </details>
+    </div>
+  </nav>
+</header>
+
+<style>
+  /* Swap the summary label without JavaScript. */
+  .nav-menu[open] .nav-menu-open {
+    display: none;
+  }
+  .nav-menu[open] .nav-menu-close {
+    display: inline;
+  }
+  .nav-menu[open] > summary {
+    color: var(--color-fg);
+    border-color: var(--color-rule-strong);
+  }
+</style>

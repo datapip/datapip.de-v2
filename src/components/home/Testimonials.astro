@@ -1,0 +1,42 @@
+---
+import Section from "../Section.astro";
+import { sections, type Locale } from "../../i18n/ui";
+import { portfolio } from "../../i18n/portfolio";
+
+interface Props {
+  lang: Locale;
+}
+
+const { lang } = Astro.props;
+const t = portfolio[lang].testimonials;
+const id = sections[lang].testimonials;
+---
+
+<Section id={id} eyebrow={t.eyebrow} heading={t.heading}>
+  <ul class="grid gap-px bg-rule md:grid-cols-3">
+    {
+      t.items.map((item) => (
+        <li class="flex flex-col bg-ground p-6 md:p-8">
+          <blockquote class="flex-1 text-[0.98rem] leading-relaxed">
+            {item.quote}
+          </blockquote>
+
+          <footer class="mt-6 border-t border-rule pt-4">
+            <p class="text-[0.9rem] font-medium">{item.name}</p>
+            <p class="label mt-1 text-fg-faint">
+              {item.designation} ·{" "}
+              <a
+                href={item.link}
+                rel="noopener noreferrer nofollow"
+                target="_blank"
+                class="transition-colors hover:text-signal"
+              >
+                {item.company}
+              </a>
+            </p>
+          </footer>
+        </li>
+      ))
+    }
+  </ul>
+</Section>
