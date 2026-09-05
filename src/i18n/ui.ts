@@ -9,9 +9,9 @@ export function isLocale(value: unknown): value is Locale {
 /**
  * Localised path segments. Keys stay stable across locales; values do not.
  *
- * `dataLayerChecker` is a reserved slug — that page does not exist yet
- * (roadmap step 5). It is kept here so the v1 URL is not accidentally
- * reassigned before it is built.
+ * The data layer checker's slugs are deliberately absent: that tool was not
+ * rebuilt, and its two v1 URLs 301 to the cookie scanner from `redirects` in
+ * astro.config.mjs. Do not reintroduce them here without a page to serve.
  */
 export const routes = {
   de: {
@@ -20,7 +20,6 @@ export const routes = {
        `routes[lang]` like every other route. */
     products: "products",
     cookieScanner: "cookie-scanner",
-    dataLayerChecker: "data-layer-checker",
     decoder: "de-kodierer",
     privacy: "datenschutz",
     imprint: "impressum",
@@ -29,7 +28,6 @@ export const routes = {
   en: {
     products: "products",
     cookieScanner: "cookie-crawler",
-    dataLayerChecker: "data-layer-crawler",
     decoder: "de-coder",
     privacy: "privacy",
     imprint: "imprint",
@@ -89,11 +87,6 @@ export const ui = {
           items: [
             { route: "decoder", label: "De-Kodierer", ready: true },
             { route: "cookieScanner", label: "Cookie-Scanner", ready: true },
-            {
-              route: "dataLayerChecker",
-              label: "Data-Layer-Checker",
-              ready: false,
-            },
           ],
         },
       ],
@@ -248,11 +241,6 @@ export const ui = {
           items: [
             { route: "decoder", label: "De-coder", ready: true },
             { route: "cookieScanner", label: "Cookie Crawler", ready: true },
-            {
-              route: "dataLayerChecker",
-              label: "Data Layer Crawler",
-              ready: false,
-            },
           ],
         },
       ],

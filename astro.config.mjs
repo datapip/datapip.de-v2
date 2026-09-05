@@ -61,6 +61,18 @@ export default defineConfig({
     },
   },
 
+  // The data layer checker was never rebuilt (see CLAUDE.md — it was barely
+  // used in v1), but its two URLs are indexed, so they must not 404. The
+  // cookie scanner is the closest surviving tool and the same audience.
+  // These four entries are the ONLY record of those slugs now; they were
+  // removed from `routes` because nothing renders at them any more.
+  redirects: {
+    '/de/data-layer-checker': { status: 301, destination: '/de/cookie-scanner/' },
+    '/de/data-layer-checker/': { status: 301, destination: '/de/cookie-scanner/' },
+    '/en/data-layer-crawler': { status: 301, destination: '/en/cookie-crawler/' },
+    '/en/data-layer-crawler/': { status: 301, destination: '/en/cookie-crawler/' },
+  },
+
   // Default `output: 'static'`. The adapter exists so the language redirect,
   // the contact form and the 404 can opt out with `prerender = false`.
   adapter: node({ mode: 'standalone' }),

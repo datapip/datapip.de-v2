@@ -373,7 +373,7 @@ v1 filed all five under a single "Produkte" menu, which advertised free tools as
 - On mobile the groups are flattened into labelled sections inside the existing menu rather than nested disclosures, so a tool is never two taps away.
 - Product paths come from `products.ts`, tool paths from `routes`; `Nav.astro` only joins them, so no slug is restated and none can drift.
 
-**`ready: false` hides an entry whose page does not exist yet.** The cookie scanner and data layer checker are set false until steps 4 and 5 land. Flip the flag in the same change that adds the page, never before — a nav link to a 404 is worse than no link.
+**`ready: false` hides an entry whose page does not exist yet.** Nothing sets it any more — every tool in the menu is built — but the mechanism stays: flip a flag in the same change that adds the page, never before. A nav link to a 404 is worse than no link.
 
 ## Content integrity
 
@@ -400,10 +400,10 @@ Where things live in v1:
 | Legal pages | `app/[lang]/(de)/impressum/`, `(de)/datenschutz/`, `(en)/imprint/`, `(en)/privacy/` |
 | Product pages | `app/[lang]/products/*`, content in `app/[lang]/(shared)/(products)/*.tsx` |
 | Cookie crawler UI | `app/[lang]/(shared)/(crawler)/*.tsx` |
-| Data layer checker UI | `app/[lang]/(shared)/(checker)/*.tsx` |
+| Data layer checker UI | `app/[lang]/(shared)/(checker)/*.tsx` — **not ported**, see Roadmap |
 | De-coder UI | `app/[lang]/(shared)/(de-coder)/decoder.tsx` |
 | Crawler API | `app/api/crawl/route.ts` |
-| Checker API | `app/api/check/route.ts` |
+| Checker API | `app/api/check/route.ts` — **not ported**, see Roadmap |
 | Feedback → PocketBase | `app/api/feedback/route.tsx` |
 | Umami client snippet | `app/[lang]/layout.tsx` (already ported — see Analytics) |
 | Umami server-side tracking | `lib/track.ts`, `middleware.ts`, `app/api/verify/route.ts`, `public/static/verify.js` — **deliberately not ported** |
@@ -425,20 +425,25 @@ Ordered by dependency and by damage-if-missing, not by fun. Each step is indepen
 - Product pages — Braze sGTM proxy and Shopify GTM setup, both locales (see **Product pages** below)
 - De-coder tool — vanilla island, both locales (see **The de-coder** below)
 - Cookie scanner page — full report with before/after consent (see **The cookie scanner** below)
+- Data layer checker retired: not rebuilt, both v1 URLs 301 to the cookie scanner (see below)
 
-### Step 5 — Data layer checker ⟵ do this first
+### Next — launch
 
-**Why now:** the heaviest tool, and the only one still needing a new API route.
+**Every page v2 needs now exists.** What remains is infrastructure, not features — work the **Launch checklist** below.
 
-- Port `app/api/check/route.ts` (292 lines) to `src/pages/api/check.ts`, `prerender = false`.
-- **Concurrency here is max 1, not 2** — it batches up to 50 URLs per request. Add a second slot pool to `src/lib/guards.ts`; do not reuse the scanner's.
-- Every URL in the batch must pass `isPublicUrl()`, not just the first.
-- Apply a rate limit at least as strict as the scanner's.
-- UI from `app/[lang]/(shared)/(checker)/*.tsx` (~500 lines).
-- Routes: `de/data-layer-checker.astro`, `en/data-layer-crawler.astro`.
-- Flip `ready: true` for `dataLayerChecker` in `nav.groups` (both locales) so it appears in the Tools menu.
+### The data layer checker was NOT rebuilt — a decision, not a backlog item
 
-**Done when:** a 50-URL batch completes, a 51st is rejected, a private URL anywhere in the batch is rejected, and two concurrent batches give the second a busy response.
+v1's `/de/data-layer-checker` and `/en/data-layer-crawler` are deliberately not ported. The Umami numbers for those pages showed they were almost never used. **Do not reopen this as "step 5"**; the code is still in v1 if the decision is ever revisited.
+
+What it did, for the record: POST up to 50 URLs plus a `dataLayerName`, a `keyPath` (with `[]` array traversal) and an `expectedValue`; it loaded each page and reported pass/fail with the actual value found. A regression harness for tracking implementations.
+
+Why it was not worth its cost:
+
+- **Its audience is practitioners, not prospects.** Using it means already knowing your data layer variable, the key path syntax and the expected value. The cookie scanner needs only a URL, which is exactly why that one earns its place.
+- **A single request could hold the box for minutes.** 50 URLs in batches of 5, a 30s page timeout plus a 10s `waitForFunction` fallback, at concurrency 1 — roughly 6–7 minutes worst case, during which every other user waits. A cookie scan is ~5s.
+- It needed a **second Playwright pool**, so up to three Chromium processes competing for one VPS.
+
+**The URLs still resolve.** `redirects` in `astro.config.mjs` 301s all four forms (with and without trailing slash) to the cookie scanner — the closest surviving tool, same audience. Verified as real 301s from the standalone server rather than meta-refresh pages, and they do not enter the sitemap. `dataLayerChecker` is gone from `routes` and from `nav.groups`, so **those redirect entries are now the only record of the slugs** — do not reassign them.
 
 ### Backlog — not scheduled
 
@@ -460,7 +465,7 @@ Every v1 URL must resolve in v2 or 301 somewhere sensible. v1's inventory (from 
 | `/de/products/shopify-gtm-setup`, `/en/products/shopify-gtm-setup` | done |
 | `/de/de-kodierer`, `/en/de-coder` | done |
 | `/de/cookie-scanner`, `/en/cookie-crawler` | done |
-| `/de/data-layer-checker`, `/en/data-layer-crawler` | step 5 |
+| `/de/data-layer-checker`, `/en/data-layer-crawler` | **301 → cookie scanner** — tool not rebuilt |
 
 Note the **trailing slash**: v2 emits `/de/` where v1 used `/de`. Confirm the host redirects one to the other consistently rather than serving both.
 
