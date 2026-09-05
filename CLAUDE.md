@@ -9,7 +9,7 @@
 - **Styling:** Tailwind CSS 4 through `@tailwindcss/vite` — there is no `tailwind.config`; tokens live in `@theme` inside `src/styles/global.css`
 - **Fonts:** Astro's built-in `fonts` pipeline with the **fontsource** provider (IBM Plex Sans + JetBrains Mono), subset to `latin` + `latin-ext`. `<Font />` in `Base.astro` emits the `@font-face` CSS and the `rel="preload"` links. **Never** switch to a font CDN — a privacy-positioned site must make no third-party request.
 - **Images:** `astro:assets`. Source files live in `src/assets/`, **not** `public/`, so they get AVIF + responsive `srcset`.
-- **Mail:** Nodemailer, imported lazily inside `src/lib/contact.ts`
+- **Mail:** Nodemailer, imported lazily inside `src/lib/mailer.ts` — one transport definition, shared by the contact form and `/api/feedback`
 - **Browser automation:** Playwright (Chromium) for the hero cookie scanner
 - **Analytics:** self-hosted Umami, **client-side only** — cookieless, no consent gate, no middleware, no per-route allowlist (see Analytics)
 - **Sitemap:** `@astrojs/sitemap`, locale-aware
@@ -32,7 +32,7 @@ Three pages ship JavaScript, all vanilla and all bundled by Vite: the homepage's
 HOST=0.0.0.0 PORT=4321 node dist/server/entry.mjs
 ```
 
-Prerendered: both homepages, all four legal pages, all four product pages, both de-coder pages and both cookie scanner pages. On demand: `/` (Accept-Language redirect), `/404`, both contact pages, `/api/scan` and `/api/feedback`. The host needs Chromium and, for the contact form, the SMTP variables — both are optional to *build*, but the scanner 502s and the form reports a config error without them.
+Prerendered: both homepages, all four legal pages, all four product pages, both de-coder pages and both cookie scanner pages. On demand: `/` (Accept-Language redirect), `/404`, both contact pages, `/api/scan` and `/api/feedback`. The host needs Chromium and, for the contact form, the SMTP variables — both are optional to *build*, but the scanner 502s and the form reports a config error without them. The `PB_*` trio is optional at run time too, and its absence is **silent**: `/api/feedback` still returns 201 and still emails, it just stops writing to PocketBase.
 
 ## Documentation files
 
@@ -60,8 +60,13 @@ src/
     scanner.ts     Cookie scanner page copy, incl. the consent comparison
   lib/
     contact.ts       Validation, honeypot and SMTP send for the contact form
-    is-public-url.ts SSRF guard — every crawl target must pass through it
-    guards.ts        TTL cache, Playwright concurrency slots, per-IP rate limit
+    mailer.ts        The one Nodemailer transport — contact form and feedback
+    is-public-url.ts SSRF guard — pre-flight only; callers re-check after redirects
+    guards.ts        TTL cache, Playwright concurrency slots, and two separate
+                     per-IP rate-limit buckets (scan, feedback)
+    escape-html.ts   The single XSS boundary for both tool panels
+    scan-types.ts    Scan request/result types — imports nothing, so the client
+                     scripts can share them without pulling in Playwright
   layouts/
     Base.astro     <html>, head (canonical, hreflang, OG, <Font preload />),
                    nav, footer, skip link. Takes an optional `noindex` prop.
@@ -69,7 +74,11 @@ src/
     Section.astro     Shared section shell: top rule, mono eyebrow, h2, lede
     ContactForm.astro Progressively-enhanced form (works with JS disabled)
     DecoderPanel.astro The de-coder tool — vanilla island, ~11 KB gzipped
+    ToolPage.astro    Shell for the two tool pages; renders the optional FAQ
+                      and its FAQPage JSON-LD through Base's head slot
+    Faq.astro         Shared native <details> FAQ — tool and product pages
     scanner/          ScannerPanel.astro — full report UI, ~2 KB gzipped
+    seo/              SiteSchema.astro — Person + Organization + WebSite
     layout/           Nav.astro, Footer.astro
     legal/            LegalPage, LegalSection, LegalContactCard, LegalResponsible
     product/          ProductPage.astro — the whole product page, both products
@@ -90,7 +99,7 @@ src/
   assets/projects/   Project screenshots — optimised by astro:assets
   styles/global.css  Tailwind import, @theme tokens, @utility, base layer
 public/
-  favicon.svg  robots.txt  static/og/   (OG image + apple-touch-icon)
+  favicon.svg  robots.txt  llms.txt  static/og/   (OG image + apple-touch-icon)
 tools/
   og-card.html   Source for the OG image. To regenerate: copy into public/,
                  render at 1200x630, save to public/static/og/datapip-og.png.
@@ -315,7 +324,7 @@ Every page family now emits exactly one `application/ld+json` block.
 
 The tool pages carried 67 and 86 words, which ranked for nothing and gave an answer engine nothing to quote. Both now end in an FAQ — the same `Faq.astro` the product pages use, native `<details>`, still zero JS — and the visible answers and the `FAQPage` schema are generated from **one** array, so they cannot drift.
 
-**These answers are technical claims about how the tools behave**, including two admissions (Base64 rejects non-Latin1 input; hashing needs a secure context). They were drafted from verified behaviour and are marked `DRAFT` in `decoder.ts` and `scanner.ts` until reviewed.
+**These answers are technical claims about how the tools behave**, including two admissions (Base64 rejects non-Latin1 input; hashing needs a secure context). They were drafted from verified behaviour and have since been **reviewed and edited by the owner in German**, with the English rewritten to match; the `DRAFT` markers are gone. The two locales now say the same thing, so an edit to one is an edit to both — and the visible answer and the schema entry move together, because they come from one array.
 
 ### llms.txt
 
@@ -438,9 +447,12 @@ Copy `.env.example` to `.env`. All vars are declared in `astro.config.mjs` under
 ```
 SMTP_HOST  SMTP_PORT  SMTP_USER  SMTP_PASS  FROM_EMAIL  TO_EMAIL
 PB_ENDPOINT  PB_USER  PB_PASSWORD
+SCANNER_NO_SANDBOX
 ```
 
 The `PB_*` trio is used by `/api/feedback` only. Without them the feedback is still emailed and only the database write is skipped.
+
+`SCANNER_NO_SANDBOX` is the one variable that is not a credential, and it defaults to `false`. Set it **only** if Chromium refuses to start on the host — see **The browser is hardened**.
 
 ## Adding a page — checklist
 
@@ -452,7 +464,7 @@ The `PB_*` trio is used by `/api/feedback` only. Without them the feedback is st
 
 ## Navigation
 
-`Nav.astro`, zero-JS. Three homepage anchors inline, then two dropdowns — **Produkte / Products** (the two paid pages) and **Tools** (the three free ones).
+`Nav.astro`, zero-JS. Three homepage anchors inline, then two dropdowns — **Produkte / Products** (the two paid pages) and **Tools** (the two free ones).
 
 v1 filed all five under a single "Produkte" menu, which advertised free tools as products. v2 splits them, matching the language the Services section already uses.
 
@@ -513,6 +525,10 @@ Ordered by dependency and by damage-if-missing, not by fun. Each step is indepen
 - De-coder tool — vanilla island, both locales (see **The de-coder** below)
 - Cookie scanner page — full report with before/after consent (see **The cookie scanner** below)
 - Data layer checker retired: not rebuilt, both v1 URLs 301 to the cookie scanner (see below)
+- Feedback endpoint restored for the two browser extensions — mail **and** PocketBase (see **The browser extensions call this site**)
+- Structured data, tool-page FAQs and `llms.txt` (see **Search and answer engines**)
+- Scanner browser hardened: sandbox on, JIT off, secrets stripped from its environment
+- Duplicated code consolidated into `mailer.ts`, `escape-html.ts` and `scan-types.ts`
 
 ### Next — launch
 
@@ -565,7 +581,11 @@ Note the **trailing slash**: v2 emits `/de/` where v1 used `/de`. Confirm the ho
 5. `sitemap-index.xml` reachable, `robots.txt` points at it, no bare `/` in the sitemap.
 6. Both locales spot-checked at 390 px and 1440 px; no horizontal scroll.
 7. OG image renders correctly in a link-preview debugger.
-8. Resubmit the sitemap in Search Console and watch for 404 spikes for two weeks.
+8. `PB_ENDPOINT` / `PB_USER` / `PB_PASSWORD` set on the host — a miss here is **silent**, so send a test message and confirm the row lands.
+9. `simple-in-page-analytics-viewer` tested against a built v2 server; watch for the `text/plain` 403.
+10. Hetzner and Cloudflare privacy clauses confirmed against the actual infrastructure — carried over from v1 and never verified.
+11. Node running as a dedicated unprivileged user, `.env` at `0600`. The browser hardening narrows the blast radius; it does not replace this.
+12. Resubmit the sitemap in Search Console and watch for 404 spikes for two weeks.
 
 ## Verification
 
