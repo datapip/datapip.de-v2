@@ -65,6 +65,12 @@ export default defineConfig({
       PB_ENDPOINT: envField.string({ context: 'server', access: 'secret', optional: true }),
       PB_USER: envField.string({ context: 'server', access: 'secret', optional: true }),
       PB_PASSWORD: envField.string({ context: 'server', access: 'secret', optional: true }),
+
+      // Escape hatch for hosts where Chromium's own sandbox cannot start —
+      // running as root, or a container without user namespaces. Leave it
+      // unset: the sandbox is the single most valuable defence this process
+      // has, because the browser opens URLs that strangers choose.
+      SCANNER_NO_SANDBOX: envField.boolean({ context: 'server', access: 'public', optional: true, default: false }),
     },
   },
 

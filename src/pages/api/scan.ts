@@ -26,6 +26,8 @@ export const prerender = false;
 import type { APIRoute } from "astro";
 import { chromium, type Frame, type Page } from "playwright";
 
+import { SCANNER_NO_SANDBOX } from "astro:env/server";
+
 import { isPublicUrl } from "../../lib/is-public-url";
 import type {
   ConsentPhase,
@@ -66,11 +68,57 @@ const MAX_STORAGE = 150;
 const MAX_VALUE_CHARS = 200;
 const MAX_SELECTOR_CHARS = 200;
 
+/**
+ * This browser opens URLs chosen by strangers, so it is the one process on
+ * the box worth hardening. Three cheap measures, all measured against a real
+ * scan of a heavy site (vkb.de, Usercentrics + Adobe + Google Ads): identical
+ * cookie, request and timing results for every combination below.
+ *
+ * 1. **The sandbox stays ON.** `--no-sandbox` was inherited from v1 and is
+ *    usually cargo-culted from container examples. Without the sandbox, a
+ *    renderer exploit is code execution as the site's own user — which can
+ *    read .env, so SMTP and PocketBase credentials. It is now opt-in via
+ *    SCANNER_NO_SANDBOX for hosts that genuinely cannot start it.
+ *
+ * 2. **JIT is off.** Most Chromium renderer exploits are JIT bugs, so
+ *    `--jitless` removes the largest single class of them. It costs
+ *    interpreted JS on the scanned page, which measured as no difference at
+ *    all here — this browser waits on the network, not on arithmetic.
+ *
+ * 3. See `browserEnv()`: the browser process does not get the secrets.
+ */
 const CHROMIUM_ARGS = [
-  "--no-sandbox",
   "--disable-dev-shm-usage",
   "--disable-blink-features=AutomationControlled",
+  "--js-flags=--jitless",
+  "--disable-extensions",
 ];
+
+/**
+ * The environment handed to Chromium, minus every secret this app declares.
+ *
+ * A renderer that got code execution would otherwise inherit them straight
+ * from its own environment. Stripping by name rather than allow-listing keeps
+ * whatever else a host needs to launch a browser, so this cannot break a
+ * deployment — it only removes what should never have been there.
+ *
+ * This narrows the blast radius; it does not close it. The .env FILE is still
+ * readable by that user, so the deployment still wants the app running as a
+ * dedicated unprivileged account with .env at 0600.
+ */
+function browserEnv(): Record<string, string> {
+  const secrets = new Set([
+    "SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS",
+    "FROM_EMAIL", "TO_EMAIL",
+    "PB_ENDPOINT", "PB_USER", "PB_PASSWORD",
+  ]);
+
+  return Object.fromEntries(
+    Object.entries(process.env).filter(
+      ([key, value]) => value !== undefined && !secrets.has(key),
+    ),
+  ) as Record<string, string>;
+}
 
 /**
  * The scan has to see what a real visitor sees, so the browser must not
@@ -372,7 +420,11 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
   const startedAt = Date.now();
 
   try {
-    const browser = await chromium.launch({ headless: true, args: CHROMIUM_ARGS });
+    const browser = await chromium.launch({
+      headless: true,
+      args: SCANNER_NO_SANDBOX ? ["--no-sandbox", ...CHROMIUM_ARGS] : CHROMIUM_ARGS,
+      env: browserEnv(),
+    });
 
     try {
       /* Client hints are sent as headers and are NOT derived from the

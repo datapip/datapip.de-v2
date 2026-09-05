@@ -241,6 +241,18 @@ This is the most reachable endpoint on the site, so it is guarded on four axes, 
 
 All guard state is per-process. If this is ever scaled past one Node process, the cache, slots and limits become per-instance — revisit before adding a replica.
 
+### The browser is hardened, because it opens URLs strangers choose
+
+Three measures, all in `scan.ts`, all measured against a real scan of vkb.de (Usercentrics + Adobe + Google Ads) with identical cookie, request and timing results:
+
+| Measure | Why |
+|---|---|
+| **The sandbox is ON** | `--no-sandbox` came from v1 and is usually cargo-culted from container examples. Without it, a renderer exploit is code execution as the site's own user. Opt out per host with `SCANNER_NO_SANDBOX=true` **only** if Chromium genuinely cannot start. |
+| **`--js-flags=--jitless`** | Most Chromium renderer exploits are JIT bugs, so this removes the largest single class. The scanner waits on the network, not on arithmetic — it measured as no slower. |
+| **`browserEnv()`** | The browser process is launched without any of the declared secrets in its environment. Stripping by name rather than allow-listing means it cannot break a host that needs some other variable to launch a browser. |
+
+**This narrows the blast radius; it does not close it.** The `.env` file is still readable by the user running the app, so the deployment still wants a dedicated unprivileged account and `.env` at `0600`. Do not read the hardening above as a substitute for that.
+
 **Deployment requires Chromium on the host:**
 
 ```
