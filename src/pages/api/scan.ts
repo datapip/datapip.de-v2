@@ -425,6 +425,13 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
 
         await page.goto(target, { waitUntil: "load", timeout: PAGE_TIMEOUT_MS });
 
+        /* isPublicUrl only ever saw the URL that was submitted. A public URL
+           that redirects to http://127.0.0.1:8090 lands the browser on an
+           internal service, and the report would then describe it — an
+           existence oracle for whatever else runs on this host. So re-check
+           where we actually ended up, not just where we were asked to go. */
+        if (!(await isPublicUrl(page.url()))) return fail("private", 400);
+
         // Let late tags fire, but never hang on a page that never idles.
         await settle(page, LOAD_SETTLE_MIN_MS, LOAD_SETTLE_MAX_MS);
 
@@ -442,6 +449,9 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
           const outcome = await clickConsent(page, selector);
 
           await settle(page, CONSENT_SETTLE_MIN_MS, CONSENT_SETTLE_MAX_MS);
+
+          // Accepting a banner can navigate; the same check has to hold after.
+          if (!(await isPublicUrl(page.url()))) return fail("private", 400);
 
           const after = await readCookies(page, targetHost);
           const afterStorage = await readStorage(page);
