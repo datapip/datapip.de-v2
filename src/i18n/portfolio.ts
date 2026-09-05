@@ -54,7 +54,7 @@ export const portfolio: Record<Locale, PortfolioContent> = {
     projects: {
       eyebrow: "Projekte",
       heading: "Gebaut, betrieben, dokumentiert",
-      lede: "Diese Webseite, der Brotrechner und weitere Services – u.a. Server-Side-Tracking und Automatisierungen – werden auf einem Server in Deutschland betrieben.",
+      lede: "Diese Webseite, der Brotrechner und weitere Services werden auf einem Server in Deutschland betrieben.",
       items: [
         {
           title: "sGTM Proxy Client für Braze™",
@@ -213,7 +213,7 @@ export const portfolio: Record<Locale, PortfolioContent> = {
     projects: {
       eyebrow: "Projects",
       heading: "Built, hosted, documented",
-      lede: "This website, the Bread Calculator, and other services – including server-side tracking and automations – are hosted on a server in Germany.",
+      lede: "This website, the Bread Calculator, and other services are hosted on a server in Germany.",
       items: [
         {
           title: "sGTM Proxy Client for Braze™",
