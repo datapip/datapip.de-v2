@@ -1,0 +1,45 @@
+---
+/**
+ * Shell for the free tool pages: metadata, the page container and the
+ * eyebrow / h1 / lede header.
+ *
+ * The same wrapper and header markup was inlined in all four tool pages,
+ * which is exactly the job `legal/LegalPage.astro` already does for the legal
+ * pages. This is that pattern applied to the other family, not a new one.
+ *
+ * The body is a slot rather than a prop, because the two tools want different
+ * measures — the scanner's tables need the full width, the de-coder reads
+ * better narrow — and that belongs to the page, not the shell.
+ *
+ * The contact pages deliberately do NOT use this: they swap the whole header
+ * for a success state after a POST, so sharing a shell would mean passing
+ * that variation through as props and would read worse than the duplication.
+ */
+import Base from "../layouts/Base.astro";
+import type { Locale } from "../i18n/ui";
+
+interface Props {
+  lang: Locale;
+  title: string;
+  description: string;
+  keywords?: string;
+  eyebrow: string;
+  heading: string;
+  lede: string;
+}
+
+const { lang, title, description, keywords, eyebrow, heading, lede } =
+  Astro.props;
+---
+
+<Base lang={lang} title={title} description={description} keywords={keywords}>
+  <div class="mx-auto max-w-[1280px] px-5 py-16 md:px-8 md:py-24">
+    <header class="max-w-[62ch]">
+      <p class="label text-signal">{eyebrow}</p>
+      <h1 class="mt-4 text-h2 font-semibold">{heading}</h1>
+      <p class="mt-5 text-lede text-fg-muted">{lede}</p>
+    </header>
+
+    <slot />
+  </div>
+</Base>

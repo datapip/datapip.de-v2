@@ -1,13 +1,5 @@
-import {
-  SMTP_HOST,
-  SMTP_PORT,
-  SMTP_USER,
-  SMTP_PASS,
-  FROM_EMAIL,
-  TO_EMAIL,
-} from "astro:env/server";
-
 import { ui, type Locale } from "../i18n/ui";
+import { isMailConfigured, sendMail } from "./mailer";
 
 export interface ContactValues {
   name: string;
@@ -66,25 +58,14 @@ export async function handleContactSubmission(
     return { status: "error", errors, values };
   }
 
-  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS || !FROM_EMAIL || !TO_EMAIL) {
+  // Checked before sending so a half-configured host reports a clear
+  // configuration error rather than a generic send failure.
+  if (!isMailConfigured()) {
     return { status: "error", errors: { form: t.errors.config }, values };
   }
 
   try {
-    // Imported lazily so the module stays out of the build when the route
-    // is never hit, and so a missing dependency cannot break the page render.
-    const { createTransport } = await import("nodemailer");
-
-    const transport = createTransport({
-      host: SMTP_HOST,
-      port: SMTP_PORT ?? 587,
-      secure: (SMTP_PORT ?? 587) === 465,
-      auth: { user: SMTP_USER, pass: SMTP_PASS },
-    });
-
-    await transport.sendMail({
-      from: FROM_EMAIL,
-      to: TO_EMAIL,
+    await sendMail({
       replyTo: `${values.name} <${values.email}>`,
       subject: values.subject
         ? `[datapip.de] ${values.subject}`

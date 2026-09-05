@@ -90,21 +90,8 @@ const strings = {
 <script is:inline type="application/json" data-scanner-strings set:html={JSON.stringify(strings)} />
 
 <script>
-  interface ScanCookie {
-    name: string;
-    domain: string;
-    expiry: string;
-    thirdParty: boolean;
-  }
-
-  interface ScanResult {
-    url: string;
-    durationMs: number;
-    cookieCount: number;
-    thirdPartyCount: number;
-    storageCount: number;
-    cookies: ScanCookie[];
-  }
+  import type { ScanBrief } from "../../lib/scan-types";
+  import { escapeHtml } from "../../lib/escape-html";
 
   const root = document.querySelector<HTMLElement>("[data-scanner]");
   if (root) {
@@ -122,14 +109,7 @@ const strings = {
         "{}",
     );
 
-    const escape = (value: string) =>
-      value.replace(
-        /[&<>"']/g,
-        (c) =>
-          ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
-            c
-          ]!,
-      );
+    const escape = escapeHtml;
 
     function setState(state: "ready" | "busy" | "done" | "error") {
       const dotClass = {
@@ -160,7 +140,7 @@ const strings = {
       status.textContent = strings.ready;
     }
 
-    function renderResult(data: ScanResult) {
+    function renderResult(data: ScanBrief) {
       idle.hidden = true;
       output.hidden = false;
       setState("done");
@@ -243,7 +223,7 @@ const strings = {
         if (!response.ok) {
           renderError(typeof data?.error === "string" ? data.error : "failed");
         } else {
-          renderResult(data as ScanResult);
+          renderResult(data as ScanBrief);
         }
       } catch {
         renderError("failed");

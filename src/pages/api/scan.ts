@@ -27,6 +27,14 @@ import type { APIRoute } from "astro";
 import { chromium, type Frame, type Page } from "playwright";
 
 import { isPublicUrl } from "../../lib/is-public-url";
+import type {
+  ConsentPhase,
+  ScanBrief,
+  ScanCookie,
+  ScanRequest,
+  ScanResult,
+  ScanStorageItem,
+} from "../../lib/scan-types";
 import {
   clientIp,
   getFromCache,
@@ -127,60 +135,6 @@ const MASK_AUTOMATION = (major: string) => {
   define("languages", ["de-DE", "de", "en-US", "en"]);
 };
 
-export interface ScanCookie {
-  name: string;
-  value: string;
-  domain: string;
-  path: string;
-  expiry: string;
-  /** v1 called this `source: "http" | "js"`. */
-  httpOnly: boolean;
-  thirdParty: boolean;
-}
-
-export interface ScanStorageItem {
-  name: string;
-  value: string;
-  storage: "local" | "session";
-  frameUrl: string;
-}
-
-export interface ScanRequest {
-  url: string;
-  host: string;
-  thirdParty: boolean;
-}
-
-/** What the second, post-click pass saw, and what consent actually changed. */
-export interface ConsentPhase {
-  /** False when the click did not happen — the numbers are then unchanged. */
-  clicked: boolean;
-  /** Why not, so the UI can tell a typo apart from a covered button. */
-  reason: "clicked" | "not-found" | "not-clickable";
-  cookieCount: number;
-  thirdPartyCount: number;
-  storageCount: number;
-  requestCount: number;
-  /** Cookies present after consent that were not there before. */
-  addedCookies: ScanCookie[];
-}
-
-export interface ScanResult {
-  url: string;
-  durationMs: number;
-  /** Every count below describes the PRE-consent pass. */
-  cookieCount: number;
-  thirdPartyCount: number;
-  storageCount: number;
-  requestCount: number;
-  thirdPartyHostCount: number;
-  cookies: ScanCookie[];
-  storage: ScanStorageItem[];
-  requests: ScanRequest[];
-  truncated: { requests: boolean; storage: boolean };
-  consent?: ConsentPhase;
-}
-
 type ErrorCode = "invalid" | "private" | "busy" | "limit" | "failed";
 
 function fail(code: ErrorCode, status: number): Response {
@@ -255,7 +209,7 @@ function normalise(raw: string): string | null {
  * served a narrowed copy rather than the whole report. Same cached scan,
  * far smaller response on the page that gets the most traffic.
  */
-function brief(result: ScanResult) {
+function brief(result: ScanResult): ScanBrief {
   return {
     url: result.url,
     durationMs: result.durationMs,

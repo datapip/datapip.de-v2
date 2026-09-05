@@ -1,5 +1,5 @@
 ---
-import Base from "../../layouts/Base.astro";
+import ToolPage from "../../components/ToolPage.astro";
 import DecoderPanel from "../../components/DecoderPanel.astro";
 import { decoder } from "../../i18n/decoder";
 
@@ -7,21 +7,16 @@ const lang = "de" as const;
 const t = decoder[lang];
 ---
 
-<Base
+<ToolPage
   lang={lang}
   title={t.meta.title}
   description={t.meta.description}
   keywords={t.meta.keywords}
+  eyebrow={t.eyebrow}
+  heading={t.h1}
+  lede={t.p}
 >
-  <div class="mx-auto max-w-[1280px] px-5 py-16 md:px-8 md:py-24">
-    <header class="max-w-[62ch]">
-      <p class="label text-signal">{t.eyebrow}</p>
-      <h1 class="mt-4 text-h2 font-semibold">{t.h1}</h1>
-      <p class="mt-5 text-lede text-fg-muted">{t.p}</p>
-    </header>
-
-    <div class="mt-12 max-w-[52rem]">
-      <DecoderPanel lang={lang} />
-    </div>
+  <div class="mt-12 max-w-[52rem]">
+    <DecoderPanel lang={lang} />
   </div>
-</Base>
+</ToolPage>

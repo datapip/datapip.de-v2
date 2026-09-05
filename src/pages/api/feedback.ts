@@ -21,19 +21,10 @@ export const prerender = false;
 
 import type { APIRoute } from "astro";
 
-import {
-  SMTP_HOST,
-  SMTP_PORT,
-  SMTP_USER,
-  SMTP_PASS,
-  FROM_EMAIL,
-  TO_EMAIL,
-  PB_ENDPOINT,
-  PB_USER,
-  PB_PASSWORD,
-} from "astro:env/server";
+import { PB_ENDPOINT, PB_USER, PB_PASSWORD } from "astro:env/server";
 
 import { clientIp, withinFeedbackRateLimit } from "../../lib/guards";
+import { sendMail } from "../../lib/mailer";
 
 interface Feedback {
   message: string;
@@ -105,21 +96,8 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
 
 /* ------------------------------ Delivery ------------------------------- */
 
-async function sendMail(feedback: Feedback): Promise<void> {
-  if (!SMTP_HOST || !TO_EMAIL) throw new Error("SMTP is not configured");
-
-  const { createTransport } = await import("nodemailer");
-
-  const transport = createTransport({
-    host: SMTP_HOST,
-    port: SMTP_PORT ?? 587,
-    secure: (SMTP_PORT ?? 587) === 465,
-    auth: { user: SMTP_USER, pass: SMTP_PASS },
-  });
-
-  await transport.sendMail({
-    from: FROM_EMAIL,
-    to: TO_EMAIL,
+async function mailFeedback(feedback: Feedback): Promise<void> {
+  await sendMail({
     // The address is optional in both extensions, so only reply to a
     // plausible one — a malformed replyTo can bounce the whole message.
     ...(looksLikeEmail(feedback.email) ? { replyTo: feedback.email } : {}),
@@ -168,7 +146,7 @@ async function storeInPocketBase(feedback: Feedback): Promise<void> {
  */
 async function deliver(feedback: Feedback): Promise<boolean> {
   const [mail, stored] = await Promise.allSettled([
-    sendMail(feedback),
+    mailFeedback(feedback),
     storeInPocketBase(feedback),
   ]);
 

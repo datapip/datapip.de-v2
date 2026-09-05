@@ -137,53 +137,8 @@ const fieldClass =
 <script is:inline type="application/json" data-scanner-strings set:html={JSON.stringify(strings)} />
 
 <script>
-  interface ScanCookie {
-    name: string;
-    value: string;
-    domain: string;
-    path: string;
-    expiry: string;
-    httpOnly: boolean;
-    thirdParty: boolean;
-  }
-
-  interface ScanStorageItem {
-    name: string;
-    value: string;
-    storage: "local" | "session";
-    frameUrl: string;
-  }
-
-  interface ScanRequest {
-    url: string;
-    host: string;
-    thirdParty: boolean;
-  }
-
-  interface ConsentPhase {
-    clicked: boolean;
-    reason: "clicked" | "not-found" | "not-clickable";
-    cookieCount: number;
-    thirdPartyCount: number;
-    storageCount: number;
-    requestCount: number;
-    addedCookies: ScanCookie[];
-  }
-
-  interface ScanResult {
-    url: string;
-    durationMs: number;
-    cookieCount: number;
-    thirdPartyCount: number;
-    storageCount: number;
-    requestCount: number;
-    thirdPartyHostCount: number;
-    cookies: ScanCookie[];
-    storage: ScanStorageItem[];
-    requests: ScanRequest[];
-    truncated: { requests: boolean; storage: boolean };
-    consent?: ConsentPhase;
-  }
+  import type { ScanCookie, ScanResult } from "../../lib/scan-types";
+  import { escapeHtml } from "../../lib/escape-html";
 
   const root = document.querySelector<HTMLElement>("[data-scanner-page]");
   if (root) {
@@ -203,12 +158,7 @@ const fieldClass =
       document.querySelector("[data-scanner-strings]")?.textContent ?? "{}",
     );
 
-    const esc = (value: string) =>
-      String(value).replace(
-        /[&<>"']/g,
-        (c) =>
-          ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!,
-      );
+    const esc = escapeHtml;
 
     function setState(state: "ready" | "busy" | "done" | "error") {
       dotEl.className = `block size-1.5 rounded-full ${
