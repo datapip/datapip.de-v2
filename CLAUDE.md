@@ -105,6 +105,23 @@ Defined entirely in `src/styles/global.css`. Components read tokens; **no compon
 
 All three ink tiers carry small text (labels, table headers, tag chips), so **every one of them must clear WCAG AA 4.5:1 against `ground`, `ground-deep` AND `raised`** — `raised` is the lightest ground and therefore the worst case. Current worst-case ratios: `fg` 14.6:1, `fg-muted` 7.4:1, `fg-faint` 4.6:1. **Lowering any lightness value breaks AA.** Verify with a real OKLCH→sRGB contrast calculation, not by eye.
 
+### Project screenshots
+
+`src/assets/projects/` holds two kinds of image, and they are not shot the same way:
+
+- **Live sites** (`brotrechner.de`, `sardinienhunde.org`) — clean viewport captures at **1280×720**, no browser chrome. They were originally full Edge-window screenshots including the tab and address bar; that was dropped deliberately, so do not reintroduce chrome on one card only.
+- **Product mockups** (the Braze, Shopify and viewer shots) — designed cards, not screenshots. Not reproducible from a URL.
+
+`Projects.astro` renders these at `aspect-video` with `object-cover`, so anything that is not 16:9 gets cropped top and bottom. Shoot at 1280×720 and nothing is lost.
+
+To re-shoot a live site after a redesign: load it at a 1280×720 viewport, dismiss any consent banner **without accepting analytics** (SardinienHunde runs Klaro — use *Auswahl speichern*, not *Alle akzeptieren*), scroll to top, capture the viewport, then
+
+```sh
+node -e "require('sharp')('shot.png').resize(1280,720,{fit:'cover'}).webp({quality:82}).toFile('src/assets/projects/<name>.webp')"
+```
+
+Filenames are imported by name in `src/i18n/portfolio.ts`, so keeping the name means no code change.
+
 ### Layout rule that bites
 
 Grid and flex items default to `min-width: auto`, so any wide child (the scan table, the CV table) will push its track past the viewport and give the whole page a horizontal scrollbar. **Every grid track holding a wide element needs `min-w-0`**, with `overflow-x-auto` on the wide element's own wrapper — and that wrapper needs `tabindex="0"` + `role="region"` + an `aria-label` so it can be scrolled by keyboard (WCAG 2.1.1).
