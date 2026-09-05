@@ -23,6 +23,7 @@ const strings = {
   thirdParty: t.thirdParty,
   storage: t.storage,
   more: t.more,
+  columns: t.columns,
   cleanHeading: t.cleanHeading,
   cleanBody: t.cleanBody,
   fullReport: t.fullReport,
@@ -166,23 +167,37 @@ const strings = {
 
       const remaining = data.cookieCount - data.cookies.length;
 
+      /* A real table, not a styled list: the three columns need headers to be
+         readable, and a header only means anything if it is a <th>. Fixed
+         layout keeps the truncation the flex version had. */
       const rows = data.cookies
         .map(
           (cookie) => `
-            <li class="flex items-baseline gap-4 border-b border-rule px-4 py-3 md:px-5">
-              <span class="w-24 shrink-0 truncate text-fg">${escape(cookie.name)}</span>
-              <span class="min-w-0 flex-1 truncate text-fg-muted">${escape(cookie.domain)}</span>
-              <span class="shrink-0 tabular-nums text-fg-muted">${escape(cookie.expiry)}</span>
-            </li>`,
+            <tr class="border-b border-rule">
+              <td class="truncate py-3 pl-4 pr-4 text-fg md:pl-5">${escape(cookie.name)}</td>
+              <td class="truncate py-3 pr-4 text-fg-muted">${escape(cookie.domain)}</td>
+              <td class="truncate py-3 pr-4 tabular-nums text-fg-muted md:pr-5">${escape(cookie.expiry)}</td>
+            </tr>`,
         )
         .join("");
 
       const moreRow =
         remaining > 0
-          ? `<li class="flex items-center gap-2 border-b border-rule px-4 py-3 text-fg-faint md:px-5">
-               <span aria-hidden="true">…</span><span>+${remaining} ${escape(strings.more)}</span>
-             </li>`
+          ? `<tr class="border-b border-rule">
+               <td colspan="3" class="py-3 pl-4 pr-4 text-fg-faint md:px-5">
+                 <span aria-hidden="true">…</span> +${remaining} ${escape(strings.more)}
+               </td>
+             </tr>`
           : "";
+
+      const head = `
+        <thead>
+          <tr class="border-b border-rule">
+            <th scope="col" class="label w-[34%] py-2 pl-4 pr-4 text-left font-normal text-fg-faint md:pl-5">${escape(strings.columns.name)}</th>
+            <th scope="col" class="label py-2 pr-4 text-left font-normal text-fg-faint">${escape(strings.columns.domain)}</th>
+            <th scope="col" class="label w-[26%] py-2 pr-4 text-left font-normal text-fg-faint md:pr-5">${escape(strings.columns.expiry)}</th>
+          </tr>
+        </thead>`;
 
       output.innerHTML = `
         <div class="border-b border-rule px-4 py-5 md:px-5">
@@ -194,7 +209,10 @@ const strings = {
             ${data.thirdPartyCount} ${escape(strings.thirdParty)} · ${data.storageCount} ${escape(strings.storage)}
           </p>
         </div>
-        <ul class="font-mono text-data">${rows}${moreRow}</ul>
+        <table class="w-full table-fixed border-collapse font-mono text-data">
+          ${head}
+          <tbody>${rows}${moreRow}</tbody>
+        </table>
         ${reportLink}`;
     }
 
