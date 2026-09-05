@@ -58,6 +58,13 @@ export default defineConfig({
       SMTP_PASS: envField.string({ context: 'server', access: 'secret', optional: true }),
       FROM_EMAIL: envField.string({ context: 'server', access: 'secret', optional: true }),
       TO_EMAIL: envField.string({ context: 'server', access: 'secret', optional: true }),
+
+      // PocketBase, for the browser extensions' feedback endpoint. Optional
+      // like the SMTP vars: without them the mail still goes out and only the
+      // database write is skipped.
+      PB_ENDPOINT: envField.string({ context: 'server', access: 'secret', optional: true }),
+      PB_USER: envField.string({ context: 'server', access: 'secret', optional: true }),
+      PB_PASSWORD: envField.string({ context: 'server', access: 'secret', optional: true }),
     },
   },
 

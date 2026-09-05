@@ -124,6 +124,14 @@ export const legal = {
           ],
         },
         {
+          heading: "Feedback aus unseren Browser-Erweiterungen",
+          paragraphs: [
+            "Wir bieten Browser-Erweiterungen an, die ein Feedback-Formular enthalten. Senden Sie darüber eine Nachricht, werden Ihre Nachricht, die Bezeichnung der verwendeten Erweiterung und – sofern Sie sie angeben – Ihre E-Mail-Adresse an diese Website übermittelt. Die Angabe einer E-Mail-Adresse ist freiwillig und nur erforderlich, wenn Sie eine Antwort wünschen.",
+            "Diese Angaben werden per E-Mail an uns übermittelt und zusätzlich in unserer Feedback-Datenbank (PocketBase) gespeichert, damit Rückmeldungen nachvollziehbar bleiben und bearbeitet werden können. Eine Veröffentlichung Ihres Feedbacks findet nicht statt. Wir löschen die Einträge, sobald sie für die Bearbeitung nicht mehr erforderlich sind.",
+            "Zur Missbrauchsvermeidung wird Ihre IP-Adresse für maximal zehn Minuten im Arbeitsspeicher vorgehalten, um die Zahl der Übermittlungen zu begrenzen; sie wird nicht gespeichert und nicht mit dem Feedback zusammengeführt. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an der Verbesserung unserer Software und an der Beantwortung von Anfragen).",
+          ],
+        },
+        {
           heading: "Cookie-Scanner",
           paragraphs: [
             "Auf dieser Website können Sie eine beliebige URL eingeben und prüfen lassen, welche Cookies die betreffende Seite setzt, bevor eine Consent-Entscheidung getroffen wurde. Die Prüfung führt unser Server mit einem automatisierten Browser durch: Die angegebene Seite wird von unserem Server aufgerufen, nicht von Ihrem Browser. Die geprüfte Website sieht daher die IP-Adresse unseres Servers und nicht Ihre.",
@@ -238,6 +246,14 @@ export const legal = {
           heading: "Contact Form",
           paragraphs: [
             "If you send us an enquiry via the contact form, your details (name, email address, optional subject and your message) are transmitted to us by email only and used to process your enquiry. They are not written to a database; the data remains in our mailbox for as long as handling your request requires. We will not share this data without your consent. The legal basis is Art. 6 (1) (b) GDPR (contract initiation) or (f) (legitimate interest).",
+          ],
+        },
+        {
+          heading: "Feedback from our browser extensions",
+          paragraphs: [
+            "We publish browser extensions that include a feedback form. If you send a message through it, your message, the name of the extension you used and — if you choose to provide it — your email address are transmitted to this website. Providing an email address is optional and only needed if you would like a reply.",
+            "These details are emailed to us and additionally stored in our feedback database (PocketBase) so that reports remain traceable and can be acted on. Your feedback is not published. We delete entries once they are no longer needed to handle your report.",
+            "To prevent abuse, your IP address is held in memory for at most ten minutes in order to limit the number of submissions; it is not stored and not combined with your feedback. The legal basis is Art. 6 (1) (f) GDPR (legitimate interest in improving our software and in responding to enquiries).",
           ],
         },
         {

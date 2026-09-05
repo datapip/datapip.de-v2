@@ -55,35 +55,49 @@ export function releaseSlot(): void {
 const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 const RATE_LIMIT_MAX = 5;
 
-const hits = new Map<string, number[]>();
+/**
+ * Each caller gets its OWN bucket. Sharing one map across endpoints would
+ * mean a visitor who ran a few scans could no longer send feedback, and the
+ * two have nothing to do with each other.
+ */
+function createRateLimit(windowMs: number, max: number) {
+  const hits = new Map<string, number[]>();
+
+  return function within(ip: string): boolean {
+    const now = Date.now();
+    const recent = (hits.get(ip) ?? []).filter((t) => now - t < windowMs);
+
+    if (recent.length >= max) {
+      hits.set(ip, recent);
+      return false;
+    }
+
+    recent.push(now);
+    hits.set(ip, recent);
+
+    // Opportunistic sweep so the map cannot grow without bound.
+    if (hits.size > 5000) {
+      for (const [key, times] of hits) {
+        if (times.every((t) => now - t >= windowMs)) hits.delete(key);
+      }
+    }
+
+    return true;
+  };
+}
 
 /**
  * The scanner sits in the hero, so it is the most reachable endpoint on the
  * site. Without this one visitor could hold both Playwright slots forever.
  */
-export function withinRateLimit(ip: string): boolean {
-  const now = Date.now();
-  const recent = (hits.get(ip) ?? []).filter(
-    (t) => now - t < RATE_LIMIT_WINDOW_MS,
-  );
+export const withinRateLimit = createRateLimit(RATE_LIMIT_WINDOW_MS, RATE_LIMIT_MAX);
 
-  if (recent.length >= RATE_LIMIT_MAX) {
-    hits.set(ip, recent);
-    return false;
-  }
-
-  recent.push(now);
-  hits.set(ip, recent);
-
-  // Opportunistic sweep so the map cannot grow without bound.
-  if (hits.size > 5000) {
-    for (const [key, times] of hits) {
-      if (times.every((t) => now - t >= RATE_LIMIT_WINDOW_MS)) hits.delete(key);
-    }
-  }
-
-  return true;
-}
+/**
+ * The feedback endpoint has to be open to any origin (the extensions that
+ * call it have per-install origins on Firefox), and a POST there sends mail.
+ * This limit is therefore the thing standing between it and a mail flood.
+ */
+export const withinFeedbackRateLimit = createRateLimit(RATE_LIMIT_WINDOW_MS, RATE_LIMIT_MAX);
 
 /**
  * `clientAddress` is the socket address the node adapter actually saw. Prefer

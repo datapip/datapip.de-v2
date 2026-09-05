@@ -32,7 +32,7 @@ Three pages ship JavaScript, all vanilla and all bundled by Vite: the homepage's
 HOST=0.0.0.0 PORT=4321 node dist/server/entry.mjs
 ```
 
-Prerendered: both homepages, all four legal pages, all four product pages, both de-coder pages and both cookie scanner pages. On demand: `/` (Accept-Language redirect), `/404`, both contact pages, and `/api/scan`. The host needs Chromium and, for the contact form, the SMTP variables — both are optional to *build*, but the scanner 502s and the form reports a config error without them.
+Prerendered: both homepages, all four legal pages, all four product pages, both de-coder pages and both cookie scanner pages. On demand: `/` (Accept-Language redirect), `/404`, both contact pages, `/api/scan` and `/api/feedback`. The host needs Chromium and, for the contact form, the SMTP variables — both are optional to *build*, but the scanner 502s and the form reports a config error without them.
 
 ## Documentation files
 
@@ -44,7 +44,7 @@ Prerendered: both homepages, all four legal pages, all four product pages, both 
 - `compressHTML` defaults to `'jsx'`, so whitespace between inline elements is stripped; use an explicit `{" "}` where a space matters.
 - **Use `{/* … */}` for template comments, never `<!-- … -->`.** HTML comments are shipped to the browser; JSX-style ones are compiled away.
 - Markdown is processed by Sätteri, not remark/rehype. `src/fetch.ts` is a reserved filename.
-- **CSRF protection is on by default.** A cross-origin `POST` (or one with no `Origin` header, e.g. plain `curl`) gets a **403**. When testing the contact form from the shell, pass `-H "Origin: http://localhost:4321"`. A 403 there is the guard working, not a bug.
+- **CSRF protection is on by default, but it only applies to form-ish content types.** Measured against the built server: a cross-origin `POST` with `content-type: text/plain` gets a **403**, while the same request as `application/json` passes through, and so does a request with no `Origin` header at all. That is the normal shape of this guard — only content types a plain HTML form can send are forgeable cross-origin — but it means **`application/json` API routes are NOT origin-checked** and must guard themselves (see `/api/feedback`). When testing the contact form from the shell, pass `-H "Origin: http://localhost:4321"`; a 403 there is the guard working, not a bug.
 
 ## Project Structure
 
@@ -79,6 +79,7 @@ src/
     index.astro      prerender=false; Accept-Language negotiation, 302 to a locale
     404.astro        prerender=false; picks its locale from the requested path
     api/scan.ts      prerender=false; cookie scanner endpoint (hero + report)
+    api/feedback.ts  prerender=false; feedback from the browser extensions
     de/index.astro   de/kontakt.astro   (kontakt is prerender=false, handles POST)
     de/impressum.astro   de/datenschutz.astro
     en/index.astro   en/contact.astro
@@ -242,6 +243,38 @@ npx playwright install --with-deps chromium
 
 The Playwright npm version and the installed browser build must match. Upgrading `playwright` without re-running this gives an instant `Executable doesn't exist` failure that surfaces as a 502.
 
+## The browser extensions call this site
+
+Two published extensions — **simple-data-layer-viewer** and **simple-in-page-analytics-viewer**, both WXT/React projects sitting beside this repo — POST their feedback sheet to **`https://datapip.de/api/feedback`**. Their builds are already in the stores, so **they define this endpoint's contract; the site cannot change it by deploying.** They send `{ message, email, source }` as JSON and treat any 2xx as success — `response.ok` is all they read.
+
+v1 answered this from `app/api/feedback/route.tsx`, which wrote to PocketBase. v2 does **both**: it emails `TO_EMAIL` (with `source` in the subject and the sender's address as `Reply-To` when one was given) **and** writes the same row to PocketBase, using v1's `feedback` collection and field names so existing rows stay uniform. `PB_ENDPOINT`, `PB_USER` and `PB_PASSWORD` are optional like the SMTP vars — with them missing only that channel is skipped.
+
+**Either channel landing counts as received, and that is deliberate.** The two run in parallel via `Promise.allSettled`; a partial failure is logged loudly but not reported to the sender. This is the opposite of the call the contact form makes, for a reason: there, "sent" while SMTP was down left an enquiry unread in a database nobody watched, whereas here PocketBase is the channel that *notifies*, so a stored row is a delivered message. Reporting failure would only make someone send their feedback twice.
+
+**This is the only place v2 uses PocketBase.** The contact form still emails and nothing else — see the backlog note, which is about that form, not this endpoint.
+
+### Why the endpoint is open, and what actually protects it
+
+The callers are extension pages: `chrome-extension://<id>` on Chrome and `moz-extension://<uuid>` on Firefox, **where the UUID differs for every installation**. An origin allowlist is therefore impossible and `access-control-allow-origin` is `*` by necessity. Since a POST here sends mail, the defences are the per-IP rate limit — its **own** bucket in `guards.ts`, because sharing the scanner's would mean running a few scans stopped you sending feedback — and the payload caps.
+
+It also needs its `OPTIONS` handler: a JSON content type makes the request non-simple, so the browser preflights it, and without a handler that preflight 404s and the POST is never sent.
+
+### The two extensions are not equivalent — one needs a change
+
+| | simple-data-layer-viewer | simple-in-page-analytics-viewer |
+|---|---|---|
+| `host_permissions` | `<all_urls>`, which covers datapip.de, so CORS is bypassed entirely | Adobe hosts only — **no** datapip.de, so real CORS applies |
+| Sends | `Content-Type: application/json` | **no Content-Type**, so the browser sends `text/plain` |
+| Against v2 | works unchanged | **403** — Astro's CSRF guard rejects cross-origin `text/plain` |
+
+The fix is one line in the second extension: add `headers: { "Content-Type": "application/json" }` to its fetch, exactly as the first one already has. **Adding datapip.de to its `host_permissions` does not help** — the CSRF check is server-side, so the request still arrives as a cross-origin `text/plain` POST.
+
+**Both extensions work against v1 today** — verified live in the browser, with PocketBase receiving both messages. An earlier reading of this file claimed the second one could not read v1's response because it lacks a host permission and v1 sends no CORS headers; that was wrong, so do not "fix" a bug that is not there. Whatever Chrome and Firefox do with extension-page origins here, the round trip works in practice.
+
+The v2 concern is narrower and was measured directly against the built server: a cross-origin `text/plain` POST is refused by Astro's CSRF guard with a **403**, before any handler runs. **Confirm this against a local v2 build before shipping** rather than trusting the inference — run the standalone server, point the extension at it, and watch for a 403.
+
+If an extension release is not possible quickly, the only server-side alternative is `security: { checkOrigin: false }` in `astro.config.mjs` — which turns the guard off for the contact form too, leaving only its honeypot. Prefer the one-line extension change.
+
 ## Analytics
 
 Self-hosted Umami, **client-side only**, served from `measure.datapip.de` — the site's own subdomain, so the "no third-party requests" property still holds, for the same reason the fonts are self-hosted. Moving analytics to a vendor-hosted domain would break that claim and would mean updating the privacy page.
@@ -291,6 +324,7 @@ v2's data flows are not v1's, and the policy describes v2. If any of this change
 | Cookie scanner | New in v2. Declares server-side fetch, the 5-min result cache and the 10-min per-IP rate-limit hold — the retention numbers come straight from `src/lib/guards.ts`. |
 | Web analytics | Client-side cookieless Umami on the site's own subdomain; no consent gate, no § 25 TDDDG consent needed. v1 described its server-side tracking. |
 | Cookies | **v2 sets none at all.** v1's `verified` and `browserLanguage` cookies are both gone — server-side tracking was not ported, and `pages/index.astro` negotiates the locale from `Accept-Language` without writing anything. |
+| Extension feedback | New clause. v1 had none, although it was already storing this data. Declares the message, the `source`, the optional email address, the dual delivery (mail **and** PocketBase), that nothing is published, and the ten-minute in-memory IP hold from the rate limit. |
 
 **Unverified from the repo:** the Hosting (Hetzner) and Cloudflare clauses are carried over from v1 and describe infrastructure, not code. Confirm they still hold before launch.
 
@@ -353,7 +387,10 @@ Copy `.env.example` to `.env`. All vars are declared in `astro.config.mjs` under
 
 ```
 SMTP_HOST  SMTP_PORT  SMTP_USER  SMTP_PASS  FROM_EMAIL  TO_EMAIL
+PB_ENDPOINT  PB_USER  PB_PASSWORD
 ```
+
+The `PB_*` trio is used by `/api/feedback` only. Without them the feedback is still emailed and only the database write is skipped.
 
 ## Adding a page — checklist
 
