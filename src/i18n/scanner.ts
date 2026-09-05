@@ -115,23 +115,17 @@ export const scanner = {
       title: "Fehler",
       unknown: "Es gab einen unbekannten Fehler.",
     },
-
-    /**
-     * DRAFT — written from the tool's verified behaviour, not from marketing
-     * copy. Read it as a technical claim about what this scanner does and
-     * correct anything that overstates it.
-     */
     faq: {
       eyebrow: "Häufige Fragen",
       title: "Fragen zum Cookie-Scanner",
       items: [
         {
           q: "Was genau wird geprüft?",
-          a: "Die angegebene Adresse wird von unserem Server in einem echten Browser geladen – ohne das Consent-Banner anzuklicken. Erfasst wird, was dabei entsteht: Cookies, Local- und Session-Storage sowie alle Requests samt fremder Hosts. Alles, was in diesem Durchlauf auftaucht, wird also vor jeder Consent-Entscheidung gesetzt.",
+          a: "Die angegebene Adresse wird von unserem Server in einem echten Browser geladen ohne den Consent-Banner anzuklicken. Erfasst werden Cookies, Local- und Session-Storage sowie alle Requests samt fremder Hosts."
         },
         {
           q: "Warum setzt eine Seite überhaupt Cookies vor der Einwilligung?",
-          a: "Meist laden Tags direkt beim Seitenaufbau, statt auf die Freigabe des Consent-Tools zu warten – etwa weil sie fest im Quelltext stehen oder im Tag Manager ohne Consent-Bedingung ausgelöst werden. Daneben erscheinen hier auch das Consent-Tool selbst und technisch notwendige Cookies wie Load-Balancer- oder CSRF-Cookies; die sind in der Regel unkritisch.",
+          a: "Meist laden Tags direkt beim Seitenaufbau, statt auf die Freigabe des Consent-Tools zu warten, da sie fest im Quelltext stehen oder im Tag Manager ohne Consent-Bedingung ausgelöst werden. Daneben erscheinen hier auch das Consent-Tool selbst und technisch notwendige Cookies wie Load-Balancer- oder CSRF-Cookies; die sind in der Regel unkritisch.",
         },
         {
           q: "Was zeigt der Vorher-Nachher-Vergleich?",
@@ -143,7 +137,7 @@ export const scanner = {
         },
         {
           q: "Ersetzt das Ergebnis eine Rechtsberatung?",
-          a: "Nein. Das Tool misst, was technisch passiert – es bewertet nicht, ob ein einzelnes Cookie einwilligungsfrei sein darf. Das hängt vom Zweck ab und ist eine juristische Frage. Als Bestandsaufnahme ist das Ergebnis aber die Grundlage für genau diese Bewertung.",
+          a: "Nein. Das Tool misst, was technisch passiert. Es bewertet nicht, ob ein einzelnes Cookie einwilligungsfrei sein darf. Das hängt vom Zweck ab und ist eine juristische Frage.",
         },
         {
           q: "Was passiert mit der eingegebenen Adresse?",
@@ -256,19 +250,17 @@ export const scanner = {
       title: "Error",
       unknown: "An unknown error occurred.",
     },
-
-    /** DRAFT — see the German block above. */
     faq: {
       eyebrow: "Common questions",
       title: "Questions about the cookie crawler",
       items: [
         {
           q: "What exactly is checked?",
-          a: "The address you enter is loaded by our server in a real browser, without clicking the consent banner. Everything that appears is recorded: cookies, local and session storage, and every request including third-party hosts. Anything found in that pass is therefore set before any consent decision.",
+          a: "The address you enter is loaded by our server in a real browser, without clicking the consent banner. Cookies, local and session storage and every request including third-party hosts are recorded.",
         },
         {
           q: "Why would a site set cookies before consent at all?",
-          a: "Usually because tags load as the page builds rather than waiting for the consent tool to release them — hard-coded in the source, or firing in a tag manager without a consent condition. The consent tool itself also shows up here, along with technically necessary cookies such as load balancer or CSRF cookies, which are generally uncontroversial.",
+          a: "Usually because tags load as the page builds rather than waiting for the consent tool to release them, since they are hard-coded in the source or fire in a tag manager without a consent condition. The consent tool itself also shows up here, along with technically necessary cookies such as load balancer or CSRF cookies, which are generally uncontroversial.",
         },
         {
           q: "What does the before/after comparison show?",
@@ -276,11 +268,11 @@ export const scanner = {
         },
         {
           q: "How do I find the button's CSS selector?",
-          a: "Right-click the accept button, choose Inspect, then right-click the highlighted element in the developer tools and pick Copy selector. Buttons inside iframes and shadow DOM are searched too, so if nothing matches, a typo in the selector is almost always the cause.",
+          a: "Right-click the accept button, choose Inspect, then right-click the highlighted element in the developer tools and pick Copy selector. Buttons inside iframes and shadow DOM are searched too. If nothing matches, a typo in the selector is almost always the cause.",
         },
         {
           q: "Is the result legal advice?",
-          a: "No. The tool measures what technically happens; it does not judge whether a given cookie may be set without consent. That depends on its purpose and is a legal question. What the result gives you is the factual basis for making that judgement.",
+          a: "No. The tool measures what technically happens. It does not judge whether a given cookie may be set without consent. That depends on its purpose and is a legal question.",
         },
         {
           q: "What happens to the address I enter?",

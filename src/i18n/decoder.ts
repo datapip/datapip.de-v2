@@ -105,13 +105,6 @@ export const decoder = {
     errorDefault: "Es gab einen unbekannten Fehler.",
     noscript:
       "Der De-Kodierer rechnet vollständig im Browser – ohne aktiviertes JavaScript kann er nicht arbeiten.",
-
-    /**
-     * DRAFT — written from the tool's verified behaviour. Two of these
-     * describe limitations that are real and deliberately kept (Base64 on
-     * non-Latin1 input, hashing over plain http); check you are happy saying
-     * them out loud before this ships.
-     */
     faq: {
       eyebrow: "Häufige Fragen",
       title: "Fragen zum De-Kodierer",
@@ -131,10 +124,6 @@ export const decoder = {
         {
           q: "Was ist der Unterschied zwischen Formatieren und Dekodieren?",
           a: "Dekodieren macht eine Kodierung rückgängig – aus %20 wird wieder ein Leerzeichen. Formatieren verändert den Inhalt nicht, sondern nur seine Darstellung: JSON wird eingerückt lesbar, ein Query-String wird als JSON-Objekt dargestellt. Beim Formatieren werden auch unsaubere Eingaben akzeptiert, etwa unquotierte Schlüssel oder abschließende Kommas.",
-        },
-        {
-          q: "Warum funktioniert das Hashen über eine unverschlüsselte Verbindung nicht?",
-          a: "Die Krypto-Funktionen des Browsers stehen nur in einem sicheren Kontext bereit – also über https oder auf localhost. Rufst du das Tool über plain http im lokalen Netz auf, fehlen SHA-1, SHA-256 und SHA-512.",
         },
       ],
     },
@@ -201,8 +190,6 @@ export const decoder = {
     errorDefault: "An unknown error occurred.",
     noscript:
       "The de-coder runs entirely in your browser — without JavaScript enabled it cannot work.",
-
-    /** DRAFT — see the German block above. */
     faq: {
       eyebrow: "Common questions",
       title: "Questions about the de-coder",
@@ -217,16 +204,12 @@ export const decoder = {
         },
         {
           q: "Why does Base64 fail on umlauts and emoji?",
-          a: "The browser's Base64 encoder only handles Latin-1 characters, so umlauts, emoji or Cyrillic text make it throw. That behaviour is kept deliberately unchanged so the output matches existing implementations.",
+          a: "The browser's Base64 encoder only handles Latin-1 characters. On umlauts, emoji or Cyrillic text it fails with an error. That behaviour is kept deliberately unchanged so the output matches existing implementations.",
         },
         {
           q: "What is the difference between formatting and decoding?",
           a: "Decoding reverses an encoding — %20 becomes a space again. Formatting leaves the content alone and changes only how it is presented: JSON is indented, and a query string is shown as a JSON object. Formatting also accepts untidy input such as unquoted keys or trailing commas.",
-        },
-        {
-          q: "Why does hashing not work over an unencrypted connection?",
-          a: "The browser's crypto functions are only available in a secure context — https or localhost. If you open the tool over plain http on a local network, SHA-1, SHA-256 and SHA-512 are unavailable.",
-        },
+        }
       ],
     },
   },
