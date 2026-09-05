@@ -1,0 +1,9 @@
+---
+import ProductPage from "../../../components/product/ProductPage.astro";
+import { products } from "../../../i18n/products";
+import image from "../../../assets/projects/braze-reverse-proxy.webp";
+
+const lang = "de" as const;
+---
+
+<ProductPage lang={lang} product={products[lang].brazeProxy} image={image} />

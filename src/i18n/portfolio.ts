@@ -63,7 +63,7 @@ export const portfolio: Record<Locale, PortfolioContent> = {
           image: brazeProxy,
           technologies: ["Google Tag Manager", "GTM API", "Braze™", "Reverse Proxy"],
           primaryText: "Zur Produktseite",
-          primaryLink: "/de/products/braze-sgtm-proxy",
+          primaryLink: "/de/products/braze-sgtm-proxy/",
         },
         {
           title: "Shopify GA4 & Google Ads Setup",
@@ -72,7 +72,7 @@ export const portfolio: Record<Locale, PortfolioContent> = {
           image: shopifyGtm,
           technologies: ["Shopify Custom Pixel", "Google Tag Manager", "GA4", "Google Ads"],
           primaryText: "Zur Produktseite",
-          primaryLink: "/de/products/shopify-gtm-setup",
+          primaryLink: "/de/products/shopify-gtm-setup/",
         },
         {
           title: "Simple Data Layer Viewer",
@@ -222,7 +222,7 @@ export const portfolio: Record<Locale, PortfolioContent> = {
           image: brazeProxy,
           technologies: ["Google Tag Manager", "GTM API", "Braze™", "Reverse Proxy"],
           primaryText: "View product",
-          primaryLink: "/en/products/braze-sgtm-proxy",
+          primaryLink: "/en/products/braze-sgtm-proxy/",
         },
         {
           title: "Shopify GA4 & Google Ads Setup",
@@ -231,7 +231,7 @@ export const portfolio: Record<Locale, PortfolioContent> = {
           image: shopifyGtm,
           technologies: ["Shopify Custom Pixel", "Google Tag Manager", "GA4", "Google Ads"],
           primaryText: "View product",
-          primaryLink: "/en/products/shopify-gtm-setup",
+          primaryLink: "/en/products/shopify-gtm-setup/",
         },
         {
           title: "Simple Data Layer Viewer",

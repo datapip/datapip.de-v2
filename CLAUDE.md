@@ -32,7 +32,7 @@ The homepage ships a single inlined ~3KB module for the scanner and nothing else
 HOST=0.0.0.0 PORT=4321 node dist/server/entry.mjs
 ```
 
-Prerendered: both homepages and all four legal pages. On demand: `/` (Accept-Language redirect), `/404`, both contact pages, and `/api/scan`. The host needs Chromium and, for the contact form, the SMTP variables — both are optional to *build*, but the scanner 502s and the form reports a config error without them.
+Prerendered: both homepages, all four legal pages and all four product pages. On demand: `/` (Accept-Language redirect), `/404`, both contact pages, and `/api/scan`. The host needs Chromium and, for the contact form, the SMTP variables — both are optional to *build*, but the scanner 502s and the form reports a config error without them.
 
 ## Documentation files
 
@@ -55,6 +55,7 @@ src/
                    contact-form and 404 copy, switchLocalePath()
     portfolio.ts   Projects (with typed image imports), testimonials, CV, contact
     legal.ts       Operator data (verbatim from v1) + imprint and privacy copy
+    products.ts    Both product pages: copy, metadata and JSON-LD source
   lib/
     contact.ts       Validation, honeypot and SMTP send for the contact form
     is-public-url.ts SSRF guard — every crawl target must pass through it
@@ -67,6 +68,7 @@ src/
     ContactForm.astro Progressively-enhanced form (works with JS disabled)
     layout/           Nav.astro, Footer.astro
     legal/            LegalPage, LegalSection, LegalContactCard, LegalResponsible
+    product/          ProductPage.astro — the whole product page, both products
     home/             Hero, ScanPanel, Services, Testimonials, Projects,
                       About, Contact
   pages/
@@ -77,6 +79,7 @@ src/
     de/impressum.astro   de/datenschutz.astro
     en/index.astro   en/contact.astro
     en/imprint.astro     en/privacy.astro
+    de/products/  en/products/   braze-sgtm-proxy.astro, shopify-gtm-setup.astro
   assets/projects/   Project screenshots — optimised by astro:assets
   styles/global.css  Tailwind import, @theme tokens, @utility, base layer
 public/
@@ -183,6 +186,26 @@ v2's data flows are not v1's, and the policy describes v2. If any of this change
 
 **Unverified from the repo:** the Hosting (Hetzner) and Cloudflare clauses are carried over from v1 and describe infrastructure, not code. Confirm they still hold before launch.
 
+## Product pages
+
+Two products, four URLs, one component. Copy and metadata live in `src/i18n/products.ts`; `components/product/ProductPage.astro` renders all of it, and the four page files under `pages/{lang}/products/` do nothing but pick a locale, a product and an image.
+
+- **The URLs are indexed — never change a `slug`.** `/{lang}/products/braze-sgtm-proxy/` and `/{lang}/products/shopify-gtm-setup/`, identical in both locales.
+- Copy is a verbatim port of v1's `(shared)/(products)` components. It is commercial copy already ranking on these URLs; port it, do not rewrite it.
+- The two products describe themselves differently — Braze has one prose block (`whatIs.body`), Shopify has an intro plus two named parts (`whatIs.intro` / `points` / `closing`). Both shapes are supported rather than forced into one.
+- **Not ported:** v1's lucide icons on the feature cards. Instrument colours nothing decoratively, so the hairline grid does the structural work. Also not ported: the Shadcn accordion — the FAQ is native `<details>`/`<summary>`, which keeps the page at zero JS.
+- Both CTAs carry v1's `data-umami-event` attributes, distinguished by `data-umami-event-type` (`product-hero-cta` / `product-bottom-cta`). Keep them — that is how CTA position is attributed.
+
+### JSON-LD
+
+Each page emits one `application/ld+json` graph: `SoftwareApplication` + `BreadcrumbList` + `FAQPage`, built in `ProductPage.astro` from the `schema` block. It reaches `<head>` through Base's `head` slot.
+
+**v1's middle "Products" breadcrumb was dropped, not missed.** It pointed at `/{lang}/products`, which has never existed in either version. The crumb trail is now Home → product.
+
+### Base.astro gained three props
+
+`keywords`, `ogImage` and a `head` slot, all optional and all used by these pages. `ogImage` matters: the share image is rendered as **JPEG** via `getImage()`, because social scrapers handle WebP unreliably. The on-page `<Image>` stays AVIF like everywhere else.
+
 ## Environment
 
 Copy `.env.example` to `.env`. All vars are declared in `astro.config.mjs` under `env.schema` and read through `astro:env/server`, so they are typed and never reach the client. All are **optional**: without them the contact form still renders and validates, but reports a configuration error instead of sending.
@@ -245,19 +268,9 @@ Ordered by dependency and by damage-if-missing, not by fun. Each step is indepen
 - Hero cookie scanner + `POST /api/scan` with SSRF, concurrency, rate-limit and cache guards
 - Client-side Umami analytics, no consent gate (see Analytics)
 - Legal pages — Impressum, Datenschutz, Imprint, Privacy (see **Legal pages** below)
+- Product pages — Braze sGTM proxy and Shopify GTM setup, both locales (see **Product pages** below)
 
-### Step 2 — Product pages ⟵ do this first
-
-**Why now:** the only pages that sell something, and `Projects.astro` already links to all four (currently 404).
-
-- Content from `app/[lang]/(shared)/(products)/braze-proxy-page.tsx` (499 lines) and `shopify-gtm-tracking-page.tsx` (550 lines).
-- Port the copy; rebuild the layout with Instrument tokens and `Section.astro`. Do not try to transliterate the Shadcn card/accordion structure.
-- Routes must stay `/{lang}/products/braze-sgtm-proxy/` and `/{lang}/products/shopify-gtm-setup/` — these are indexed.
-- Add `products` entries to `routes` in `src/i18n/ui.ts`, and give each page its own `generateMetadata` equivalent (title, description, OG).
-
-**Done when:** the four URLs match v1 exactly, Projects links resolve, and each page has its own title and description.
-
-### Step 3 — De-coder
+### Step 3 — De-coder ⟵ do this first
 
 **Why now:** the cheapest of the three tools — 461 lines, pure client-side, no API, no Playwright.
 
@@ -308,8 +321,8 @@ Every v1 URL must resolve in v2 or 301 somewhere sensible. v1's inventory (from 
 | `/de`, `/en` | done (now `/de/`, `/en/`) |
 | `/de/impressum`, `/de/datenschutz` | done |
 | `/en/imprint`, `/en/privacy` | done |
-| `/de/products/braze-sgtm-proxy`, `/en/products/braze-sgtm-proxy` | step 2 |
-| `/de/products/shopify-gtm-setup`, `/en/products/shopify-gtm-setup` | step 2 |
+| `/de/products/braze-sgtm-proxy`, `/en/products/braze-sgtm-proxy` | done |
+| `/de/products/shopify-gtm-setup`, `/en/products/shopify-gtm-setup` | done |
 | `/de/de-kodierer`, `/en/de-coder` | step 3 |
 | `/de/cookie-scanner`, `/en/cookie-crawler` | step 4 |
 | `/de/data-layer-checker`, `/en/data-layer-crawler` | step 5 |

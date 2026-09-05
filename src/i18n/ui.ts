@@ -15,6 +15,10 @@ export function isLocale(value: unknown): value is Locale {
  */
 export const routes = {
   de: {
+    /* Not localised: both locales serve /{lang}/products/{slug} with the same
+       slugs, because those URLs are indexed. Present so paths resolve through
+       `routes[lang]` like every other route. */
+    products: "products",
     cookieScanner: "cookie-scanner",
     dataLayerChecker: "data-layer-checker",
     decoder: "de-kodierer",
@@ -23,6 +27,7 @@ export const routes = {
     contact: "kontakt",
   },
   en: {
+    products: "products",
     cookieScanner: "cookie-crawler",
     dataLayerChecker: "data-layer-crawler",
     decoder: "de-coder",
