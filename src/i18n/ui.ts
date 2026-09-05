@@ -152,15 +152,6 @@ export const ui = {
           body: "Client-seitig, server-seitig oder cookieless – inklusive Anbindung von Consent-Management-Systemen. Sauber, skalierbar, dokumentiert.",
           tags: ["Adobe Analytics", "Google Tag Manager", "Server-side", "Architektur"],
         },
-        {
-          title: "Tracking-Tools",
-          body: "Cookie-Scanner und De-Kodierer – direkt im Browser nutzbar, ohne Anmeldung und kostenlos.",
-          tags: ["Cookie-Scanner", "De-Kodierer", "Consent-Prüfung"],
-          links: [
-            { route: "cookieScanner", label: "Cookie-Scanner" },
-            { route: "decoder", label: "De-Kodierer" },
-          ],
-        },
       ],
     },
     footer: {
@@ -310,15 +301,6 @@ export const ui = {
           title: "Tracking setup",
           body: "Client-side, server-side or cookieless – including consent management integration. Clean, scalable, documented.",
           tags: ["Adobe Analytics", "Google Tag Manager", "Server-side", "Architecture"],
-        },
-        {
-          title: "Tracking tools",
-          body: "Cookie crawler and de-coder – usable straight from the browser, no sign-up, free.",
-          tags: ["Cookie Crawler", "De-coder", "Consent check"],
-          links: [
-            { route: "cookieScanner", label: "Cookie Crawler" },
-            { route: "decoder", label: "De-coder" },
-          ],
         },
       ],
     },
