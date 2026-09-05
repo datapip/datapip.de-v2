@@ -102,7 +102,7 @@ const fieldClass =
     <div class="flex flex-wrap items-center gap-4">
       <button
         type="submit"
-        class="label bg-signal px-6 py-3 font-medium text-signal-ink transition-opacity hover:opacity-90 disabled:opacity-40"
+        class="label bg-signal px-6 py-3 font-medium text-signal-ink transition-colors hover:bg-signal-hover disabled:opacity-40"
         data-umami-event="tool_use"
         data-umami-event-type="crawler"
         data-submit
@@ -218,7 +218,12 @@ const fieldClass =
     }
 
     function metric(value: number | string, label: string, tone = "text-fg") {
-      return `<div class="min-w-0 border-l border-rule pl-4 first:border-l-0 first:pl-0">
+      /* Dividers only where the six metrics are guaranteed to sit on ONE
+         row. As a wrapping flex row, `first:border-l-0` cleared the first
+         item overall, so every wrapped row after it began with a stray
+         hairline — five of six at 390px. Below lg the grid separates them
+         with space instead. */
+      return `<div class="min-w-0 lg:border-l lg:border-rule lg:pl-4 lg:first:border-l-0 lg:first:pl-0">
         <p class="font-mono text-[2rem] font-medium leading-none tabular-nums ${tone}">${value}</p>
         <p class="label mt-2 text-fg-faint">${esc(label)}</p>
       </div>`;
@@ -266,7 +271,7 @@ const fieldClass =
             — ${esc(s.result.scannedIn)} <span class="tabular-nums">${(data.durationMs / 1000).toFixed(1)}s</span>
           </p>
 
-          <div class="mt-6 flex flex-wrap gap-x-8 gap-y-6">
+          <div class="mt-6 grid grid-cols-2 gap-x-8 gap-y-6 sm:grid-cols-3 lg:grid-cols-6">
             ${metric(data.cookieCount, s.result.metrics.cookies, clean ? "text-signal" : "text-crit")}
             ${
               /* Always rendered, so the pair reads as a before/after and the

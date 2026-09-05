@@ -50,7 +50,7 @@ const id = sections[lang].projects;
             <div class="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-rule pt-5">
               <a
                 href={project.primaryLink}
-                class="label text-signal transition-colors hover:text-fg"
+                class="label inline-block py-1.5 text-signal transition-colors hover:text-fg"
                 rel={
                   project.primaryLink.startsWith("http")
                     ? "noopener noreferrer"
@@ -68,7 +68,7 @@ const id = sections[lang].projects;
                   href={project.secondaryLink}
                   rel="noopener noreferrer"
                   target="_blank"
-                  class="label text-fg-muted transition-colors hover:text-fg"
+                  class="label inline-block py-1.5 text-fg-muted transition-colors hover:text-fg"
                 >
                   {project.secondaryText} &rarr;
                 </a>

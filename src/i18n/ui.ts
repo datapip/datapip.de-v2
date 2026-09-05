@@ -178,7 +178,7 @@ export const ui = {
         message: "Nachricht",
       },
       hints: {
-        subject: "Optional",
+        subject: "optional",
         message: "Mindestens 20 Zeichen",
       },
       submit: "Anfrage senden",
@@ -332,7 +332,7 @@ export const ui = {
         message: "Message",
       },
       hints: {
-        subject: "Optional",
+        subject: "optional",
         message: "At least 20 characters",
       },
       submit: "Send enquiry",

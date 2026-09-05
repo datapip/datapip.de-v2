@@ -53,7 +53,7 @@ export const decoder = {
     },
     eyebrow: "Werkzeug",
     panelTitle: "De-Kodierer",
-    h1: "En-Kodierer",
+    h1: "De-Kodierer",
     p: "Ein unkompliziertes Tool zum schnellen En- und Dekodieren von Daten – unterstützt URL, Base64, SHA256, MD5 und JSON",
     field: {
       label: "Aktion",
@@ -116,7 +116,7 @@ export const decoder = {
     },
     eyebrow: "Tool",
     panelTitle: "De-coder",
-    h1: "En-Coder",
+    h1: "De-coder",
     p: "A simple tool for quickly encoding and decoding data – supports URL, Base64, SHA256, MD5, and JSON.",
     field: {
       label: "Action",

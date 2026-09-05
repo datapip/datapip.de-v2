@@ -100,9 +100,15 @@ tools/
 
 Defined entirely in `src/styles/global.css`. Components read tokens; **no component ever hard-codes a colour.** (v1's bug was exactly this: a hard-coded `text-black/60` plus a `.dark` block that turned the brand teal white.)
 
+v2 had started to repeat it: five components carried the literal `hover:bg-[oklch(0.84_0.13_180)]`, so changing the signal hue would have missed all five. That is now `--color-signal-hover`, and **every primary button uses the one hover treatment** — four of them had drifted to `hover:opacity-90`, which reads differently because a translucent button lets the ground through.
+
+### Tap targets
+
+Standalone links need **24×24 CSS px** (WCAG 2.2 AA, 2.5.8). Footer links, project card links and the nav logo all sat under that and now carry `inline-block py-1.5`. Links genuinely **inline in a sentence are exempt** and are deliberately left alone — the testimonial company names and the contact email sit inside running text.
+
 - **Ground ramp:** `ground` → `ground-deep` → `raised` → `rule` → `rule-strong`
 - **Ink:** `fg` → `fg-muted` → `fg-faint`
-- **State — the only colours in the system:** `signal` (teal: pass + interactive), `warn`, `crit`. `warn` and `crit` appear *only* inside tool output and form errors. Nothing is coloured decoratively.
+- **State — the only colours in the system:** `signal` (teal: pass + interactive) with `signal-hover` for its filled controls, `warn`, `crit`. `warn` and `crit` appear *only* inside tool output and form errors. Nothing is coloured decoratively.
 - **Type:** IBM Plex Sans for prose; JetBrains Mono is **structural** — every eyebrow, label, metric, table header and status chip. Use the `label` utility. Digits that line up get `tabular-nums`.
 - **Scale:** fluid `--text-display / h2 / h3 / lede / label / data`. Display type is spent once per screen; everything else stays small and dense.
 - **Grid:** the `grid-rules` utility draws the visible column grid. Keep it at the edge of perception — order, not pattern.

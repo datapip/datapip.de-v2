@@ -36,6 +36,10 @@
 
   /* state - the only colours in the system */
   --color-signal: oklch(0.780 0.135 180);
+  /* Hover for signal-filled controls. A token, not a literal in five
+     components: the whole point of this layer is that changing the signal
+     hue — or adding a light theme — cannot miss a hard-coded copy. */
+  --color-signal-hover: oklch(0.840 0.130 180);
   --color-signal-ink: oklch(0.190 0.045 180);
   --color-warn: oklch(0.795 0.140 70);
   --color-crit: oklch(0.690 0.185 27);
