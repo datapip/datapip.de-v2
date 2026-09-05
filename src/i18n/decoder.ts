@@ -47,7 +47,7 @@ export const decoder = {
     meta: {
       title: "De-Kodierer | Online Encoding & Decoding Tool | datapip.de",
       description:
-        "Kostenloses Online-Tool für Encoding, Decoding & Hashing. Unterstützt URL, Base64, SHA256, MD5, JSON. Ideal für Entwickler & Analysten. Keine Registrierung erforderlich. ✓",
+        "Kostenloses Online-Tool für Encoding, Decoding & Hashing: URL, Base64, SHA256, MD5, JSON. Für Entwickler und Analysten. Keine Registrierung.",
       keywords:
         "Encoding, Decoding, URL Encoding, Base64, SHA256, MD5, JSON Formatter, Online Tool",
     },
@@ -105,6 +105,39 @@ export const decoder = {
     errorDefault: "Es gab einen unbekannten Fehler.",
     noscript:
       "Der De-Kodierer rechnet vollständig im Browser – ohne aktiviertes JavaScript kann er nicht arbeiten.",
+
+    /**
+     * DRAFT — written from the tool's verified behaviour. Two of these
+     * describe limitations that are real and deliberately kept (Base64 on
+     * non-Latin1 input, hashing over plain http); check you are happy saying
+     * them out loud before this ships.
+     */
+    faq: {
+      eyebrow: "Häufige Fragen",
+      title: "Fragen zum De-Kodierer",
+      items: [
+        {
+          q: "Werden meine Eingaben an einen Server gesendet?",
+          a: "Nein. Kodieren, Dekodieren, Hashen und Formatieren laufen vollständig in deinem Browser. Es wird kein Wert übertragen, protokolliert oder gespeichert – die Seite lädt einmal und rechnet danach lokal.",
+        },
+        {
+          q: "Welche Hash-Verfahren werden unterstützt?",
+          a: "MD5, SHA-1, SHA-256 und SHA-512. MD5 und SHA-1 gelten als gebrochen und sollten für Sicherheitszwecke nicht mehr verwendet werden; sie sind hier, weil sie in bestehenden Tracking-Setups und Schnittstellen weiterhin vorkommen. Für neue Implementierungen ist SHA-256 die richtige Wahl.",
+        },
+        {
+          q: "Warum schlägt Base64 bei Umlauten fehl?",
+          a: "Die Base64-Kodierung des Browsers verarbeitet nur Latin-1-Zeichen. Bei Umlauten, Emoji oder kyrillischen Zeichen bricht sie mit einem Fehler ab. Das Verhalten ist bewusst unverändert übernommen, damit die Ausgabe zu bestehenden Implementierungen passt.",
+        },
+        {
+          q: "Was ist der Unterschied zwischen Formatieren und Dekodieren?",
+          a: "Dekodieren macht eine Kodierung rückgängig – aus %20 wird wieder ein Leerzeichen. Formatieren verändert den Inhalt nicht, sondern nur seine Darstellung: JSON wird eingerückt lesbar, ein Query-String wird als JSON-Objekt dargestellt. Beim Formatieren werden auch unsaubere Eingaben akzeptiert, etwa unquotierte Schlüssel oder abschließende Kommas.",
+        },
+        {
+          q: "Warum funktioniert das Hashen über eine unverschlüsselte Verbindung nicht?",
+          a: "Die Krypto-Funktionen des Browsers stehen nur in einem sicheren Kontext bereit – also über https oder auf localhost. Rufst du das Tool über plain http im lokalen Netz auf, fehlen SHA-1, SHA-256 und SHA-512.",
+        },
+      ],
+    },
   },
   en: {
     meta: {
@@ -168,5 +201,33 @@ export const decoder = {
     errorDefault: "An unknown error occurred.",
     noscript:
       "The de-coder runs entirely in your browser — without JavaScript enabled it cannot work.",
+
+    /** DRAFT — see the German block above. */
+    faq: {
+      eyebrow: "Common questions",
+      title: "Questions about the de-coder",
+      items: [
+        {
+          q: "Is anything I type sent to a server?",
+          a: "No. Encoding, decoding, hashing and formatting all run entirely in your browser. No value is transmitted, logged or stored — the page loads once and computes locally after that.",
+        },
+        {
+          q: "Which hashing algorithms are supported?",
+          a: "MD5, SHA-1, SHA-256 and SHA-512. MD5 and SHA-1 are considered broken and should no longer be used for security purposes; they are here because existing tracking setups and interfaces still rely on them. For anything new, SHA-256 is the right choice.",
+        },
+        {
+          q: "Why does Base64 fail on umlauts and emoji?",
+          a: "The browser's Base64 encoder only handles Latin-1 characters, so umlauts, emoji or Cyrillic text make it throw. That behaviour is kept deliberately unchanged so the output matches existing implementations.",
+        },
+        {
+          q: "What is the difference between formatting and decoding?",
+          a: "Decoding reverses an encoding — %20 becomes a space again. Formatting leaves the content alone and changes only how it is presented: JSON is indented, and a query string is shown as a JSON object. Formatting also accepts untidy input such as unquoted keys or trailing commas.",
+        },
+        {
+          q: "Why does hashing not work over an unencrypted connection?",
+          a: "The browser's crypto functions are only available in a secure context — https or localhost. If you open the tool over plain http on a local network, SHA-1, SHA-256 and SHA-512 are unavailable.",
+        },
+      ],
+    },
   },
 } as const satisfies Record<Locale, unknown>;

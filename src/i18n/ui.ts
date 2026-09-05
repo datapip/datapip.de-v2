@@ -58,7 +58,7 @@ export const ui = {
     htmlLang: "de-DE",
     ogLocale: "de_DE",
     meta: {
-      title: "Digital Analytics & Development | Philipp Jäckle | datapip.de",
+      title: "Digital Analyst & Tracking-Beratung | Philipp Jäckle | datapip.de",
       description:
         "Digital Analyst mit 10+ Jahren Erfahrung in Web Analytics, Tag Management, Consent Management & Web Development.",
       ogImageAlt:
@@ -153,8 +153,12 @@ export const ui = {
         },
         {
           title: "Tracking-Tools",
-          body: "Scanner, Checker und De-Kodierer – direkt im Browser nutzbar, ohne Anmeldung und kostenlos.",
-          tags: ["Cookie-Scanner", "Data Layer Checker", "De-Kodierer"],
+          body: "Cookie-Scanner und De-Kodierer – direkt im Browser nutzbar, ohne Anmeldung und kostenlos.",
+          tags: ["Cookie-Scanner", "De-Kodierer", "Consent-Prüfung"],
+          links: [
+            { route: "cookieScanner", label: "Cookie-Scanner" },
+            { route: "decoder", label: "De-Kodierer" },
+          ],
         },
       ],
     },
@@ -307,8 +311,12 @@ export const ui = {
         },
         {
           title: "Tracking tools",
-          body: "Crawler, checker and decoder – usable straight from the browser, no sign-up, free.",
-          tags: ["Cookie Crawler", "Data Layer Checker", "De-coder"],
+          body: "Cookie crawler and de-coder – usable straight from the browser, no sign-up, free.",
+          tags: ["Cookie Crawler", "De-coder", "Consent check"],
+          links: [
+            { route: "cookieScanner", label: "Cookie Crawler" },
+            { route: "decoder", label: "De-coder" },
+          ],
         },
       ],
     },

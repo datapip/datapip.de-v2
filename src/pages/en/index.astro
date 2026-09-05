@@ -6,11 +6,14 @@ import Testimonials from "../../components/home/Testimonials.astro";
 import Projects from "../../components/home/Projects.astro";
 import About from "../../components/home/About.astro";
 import Contact from "../../components/home/Contact.astro";
+import SiteSchema from "../../components/seo/SiteSchema.astro";
 
 const lang = "en" as const;
 ---
 
 <Base lang={lang}>
+  <SiteSchema slot="head" lang={lang} />
+
   <Hero lang={lang} />
   <Services lang={lang} />
   <Testimonials lang={lang} />

@@ -1,0 +1,47 @@
+# datapip.de
+
+> Philipp Jäckle — freelance digital analyst specialising in privacy-focused
+> tracking, tag management and data layer implementation. Based in Germany,
+> working in German and English.
+
+The site is bilingual. Every page exists under /de/ and /en/; the German and
+English URLs use different slugs and are linked by hreflang.
+
+## What is offered
+
+- Tracking debugging — auditing existing implementations, finding the cause of
+  broken or missing data, fixing data layer, tag firing and consent logic.
+- Tracking setup — client-side, server-side or cookieless, including consent
+  management platform integration.
+- Free browser-based tools, listed below.
+
+## Free tools
+
+- [Cookie scanner](https://datapip.de/en/cookie-crawler/): loads a URL on the
+  server and reports which cookies, storage entries and requests occur BEFORE
+  any consent decision. Optionally clicks a consent button and reports what
+  consent changed. German: https://datapip.de/de/cookie-scanner/
+- [De-coder](https://datapip.de/en/de-coder/): encode/decode URL and Base64,
+  hash with MD5 or SHA-1/256/512, format JSON and querystrings. Runs entirely
+  in the browser. German: https://datapip.de/de/de-kodierer/
+
+## Paid products
+
+- [Braze sGTM proxy](https://datapip.de/en/products/braze-sgtm-proxy/): a
+  server-side Google Tag Manager client template that serves the Braze Web SDK
+  from a first-party domain.
+- [Shopify GA4 and Google Ads setup](https://datapip.de/en/products/shopify-gtm-setup/):
+  a pre-built Shopify Custom Pixel plus GTM web container.
+
+## Legal and privacy
+
+- Imprint: https://datapip.de/en/imprint/ (German: /de/impressum/)
+- Privacy policy: https://datapip.de/en/privacy/ (German: /de/datenschutz/)
+
+The site sets no cookies of its own. Analytics is self-hosted, cookieless
+Umami served from the site's own subdomain, so no third-party request is made
+on any page.
+
+## Contact
+
+info@datapip.de — https://datapip.de/en/contact/

@@ -281,6 +281,38 @@ The v2 concern is narrower and was measured directly against the built server: a
 
 If an extension release is not possible quickly, the only server-side alternative is `security: { checkOrigin: false }` in `astro.config.mjs` — which turns the guard off for the contact form too, leaving only its honeypot. Prefer the one-line extension change.
 
+## Search and answer engines
+
+### Structured data
+
+Every page family now emits exactly one `application/ld+json` block.
+
+| Page | Graph |
+|---|---|
+| Homepages | `Person` + `Organization` + `WebSite`, from `components/seo/SiteSchema.astro` |
+| Product pages | `SoftwareApplication` + `BreadcrumbList` + `FAQPage`, from `ProductPage.astro` |
+| Tool pages | `FAQPage`, from `ToolPage.astro` |
+
+**The homepage graph is deliberately NOT `ProfessionalService` or `LocalBusiness`.** Those are local-business types that expect premises a customer can visit, and the Impressum address is a c/o forwarding service shared with many other businesses — publishing it as a business location would attach this entity to an unrelated building. `areaServed` carries the geography instead, which is the part that is true.
+
+**`sameAs` is absent because no profile URL exists anywhere in this repo.** Inventing one would be fabricating an identity claim. Adding LinkedIn/GitHub/Xing there is the single strongest remaining entity signal — do it when the URLs are to hand.
+
+`knowsAbout` lists only disciplines the Services and About sections already claim. Keep it that way; it is a factual assertion, not a keyword list.
+
+### Answer-shaped content
+
+The tool pages carried 67 and 86 words, which ranked for nothing and gave an answer engine nothing to quote. Both now end in an FAQ — the same `Faq.astro` the product pages use, native `<details>`, still zero JS — and the visible answers and the `FAQPage` schema are generated from **one** array, so they cannot drift.
+
+**These answers are technical claims about how the tools behave**, including two admissions (Base64 rejects non-Latin1 input; hashing needs a secure context). They were drafted from verified behaviour and are marked `DRAFT` in `decoder.ts` and `scanner.ts` until reviewed.
+
+### llms.txt
+
+`public/llms.txt` describes the site for answer engines: what is offered, both URLs of every tool and product, and the privacy posture. Keep it in step with the routes — it is the one place besides the sitemap that lists them all in prose.
+
+### Meta descriptions
+
+Keep them under ~155 characters or the tail is truncated in results. The de-coder and cookie scanner were 171 and 179 and are trimmed. **The product meta descriptions are still over** (187–215) and were left alone deliberately: they are commercial copy already ranking on those URLs, which this file says to port and not rewrite. Trimming them is a decision for the owner, not a cleanup.
+
 ## Analytics
 
 Self-hosted Umami, **client-side only**, served from `measure.datapip.de` — the site's own subdomain, so the "no third-party requests" property still holds, for the same reason the fonts are self-hosted. Moving analytics to a vendor-hosted domain would break that claim and would mean updating the privacy page.

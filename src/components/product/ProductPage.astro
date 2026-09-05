@@ -11,6 +11,7 @@ import { Image, getImage } from "astro:assets";
 
 import Base from "../../layouts/Base.astro";
 import Section from "../Section.astro";
+import Faq from "../Faq.astro";
 import type { Product } from "../../i18n/products";
 import type { Locale } from "../../i18n/ui";
 
@@ -249,27 +250,7 @@ const ctaRel = "noopener noreferrer";
     </ul>
   </Section>
 
-  {/* FAQ — native disclosure, no JS */}
-  <Section id="faq" eyebrow={p.faq.eyebrow} heading={p.faq.title}>
-    <div class="max-w-[72ch]">
-      {
-        p.faq.items.map((item) => (
-          <details class="group border-t border-rule last:border-b">
-            <summary class="flex cursor-pointer list-none items-baseline gap-4 py-5 font-semibold marker:hidden [&::-webkit-details-marker]:hidden">
-              <span
-                class="label shrink-0 text-signal transition-transform group-open:rotate-90"
-                aria-hidden="true"
-              >
-                &rsaquo;
-              </span>
-              <span class="min-w-0">{item.q}</span>
-            </summary>
-            <p class="pb-6 pl-8 text-[0.94rem] text-fg-muted">{item.a}</p>
-          </details>
-        ))
-      }
-    </div>
-  </Section>
+  <Faq eyebrow={p.faq.eyebrow} title={p.faq.title} items={p.faq.items} />
 
   {/* Bottom CTA */}
   <section class="border-t border-rule">

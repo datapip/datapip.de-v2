@@ -15,7 +15,7 @@ export const scanner = {
     meta: {
       title: "Cookie-Scanner | Cookies vor Consent prüfen | datapip.de",
       description:
-        "Kostenloses Tool: prüft, welche Cookies, Storage-Einträge und Requests eine Webseite setzt, bevor eine Consent-Entscheidung getroffen wurde. Optional mit Vorher-Nachher-Vergleich.",
+        "Kostenloses Tool: zeigt, welche Cookies und Requests eine Seite vor der Consent-Entscheidung setzt – mit optionalem Vorher-Nachher-Vergleich.",
       keywords:
         "Cookie-Scanner, Cookies prüfen, Consent, DSGVO, TDDDG, Local Storage, Tracking, Datenschutz",
     },
@@ -114,6 +114,42 @@ export const scanner = {
       failed: "Die Seite konnte nicht geladen werden.",
       title: "Fehler",
       unknown: "Es gab einen unbekannten Fehler.",
+    },
+
+    /**
+     * DRAFT — written from the tool's verified behaviour, not from marketing
+     * copy. Read it as a technical claim about what this scanner does and
+     * correct anything that overstates it.
+     */
+    faq: {
+      eyebrow: "Häufige Fragen",
+      title: "Fragen zum Cookie-Scanner",
+      items: [
+        {
+          q: "Was genau wird geprüft?",
+          a: "Die angegebene Adresse wird von unserem Server in einem echten Browser geladen – ohne das Consent-Banner anzuklicken. Erfasst wird, was dabei entsteht: Cookies, Local- und Session-Storage sowie alle Requests samt fremder Hosts. Alles, was in diesem Durchlauf auftaucht, wird also vor jeder Consent-Entscheidung gesetzt.",
+        },
+        {
+          q: "Warum setzt eine Seite überhaupt Cookies vor der Einwilligung?",
+          a: "Meist laden Tags direkt beim Seitenaufbau, statt auf die Freigabe des Consent-Tools zu warten – etwa weil sie fest im Quelltext stehen oder im Tag Manager ohne Consent-Bedingung ausgelöst werden. Daneben erscheinen hier auch das Consent-Tool selbst und technisch notwendige Cookies wie Load-Balancer- oder CSRF-Cookies; die sind in der Regel unkritisch.",
+        },
+        {
+          q: "Was zeigt der Vorher-Nachher-Vergleich?",
+          a: "Gibst du einen CSS-Selektor für den Zustimmen-Button an, wird die Seite ein zweites Mal ausgelesen: einmal vor dem Klick, einmal danach. Ausgewiesen werden beide Stände und zusätzlich die Liste der Cookies, die erst durch die Einwilligung hinzugekommen sind.",
+        },
+        {
+          q: "Wie finde ich den CSS-Selektor des Buttons?",
+          a: "Rechtsklick auf den Zustimmen-Button, „Untersuchen“, dann in den Entwicklertools erneut Rechtsklick auf das markierte Element und „Selektor kopieren“ wählen. Buttons in iframes und im Shadow DOM werden mitdurchsucht. Wird nichts gefunden, ist fast immer ein Tippfehler im Selektor die Ursache.",
+        },
+        {
+          q: "Ersetzt das Ergebnis eine Rechtsberatung?",
+          a: "Nein. Das Tool misst, was technisch passiert – es bewertet nicht, ob ein einzelnes Cookie einwilligungsfrei sein darf. Das hängt vom Zweck ab und ist eine juristische Frage. Als Bestandsaufnahme ist das Ergebnis aber die Grundlage für genau diese Bewertung.",
+        },
+        {
+          q: "Was passiert mit der eingegebenen Adresse?",
+          a: "Adresse und Ergebnis liegen fünf Minuten im Arbeitsspeicher, damit eine erneute Prüfung derselben Seite keinen zweiten Seitenaufruf auslöst. Zur Begrenzung der Anfragen wird deine IP-Adresse maximal zehn Minuten vorgehalten. Dauerhaft gespeichert wird nichts.",
+        },
+      ],
     },
   },
 
@@ -219,6 +255,38 @@ export const scanner = {
       failed: "The page could not be loaded.",
       title: "Error",
       unknown: "An unknown error occurred.",
+    },
+
+    /** DRAFT — see the German block above. */
+    faq: {
+      eyebrow: "Common questions",
+      title: "Questions about the cookie crawler",
+      items: [
+        {
+          q: "What exactly is checked?",
+          a: "The address you enter is loaded by our server in a real browser, without clicking the consent banner. Everything that appears is recorded: cookies, local and session storage, and every request including third-party hosts. Anything found in that pass is therefore set before any consent decision.",
+        },
+        {
+          q: "Why would a site set cookies before consent at all?",
+          a: "Usually because tags load as the page builds rather than waiting for the consent tool to release them — hard-coded in the source, or firing in a tag manager without a consent condition. The consent tool itself also shows up here, along with technically necessary cookies such as load balancer or CSRF cookies, which are generally uncontroversial.",
+        },
+        {
+          q: "What does the before/after comparison show?",
+          a: "If you supply a CSS selector for the accept button, the page is read a second time: once before the click and once after. Both states are reported, plus the list of cookies that consent actually added.",
+        },
+        {
+          q: "How do I find the button's CSS selector?",
+          a: "Right-click the accept button, choose Inspect, then right-click the highlighted element in the developer tools and pick Copy selector. Buttons inside iframes and shadow DOM are searched too, so if nothing matches, a typo in the selector is almost always the cause.",
+        },
+        {
+          q: "Is the result legal advice?",
+          a: "No. The tool measures what technically happens; it does not judge whether a given cookie may be set without consent. That depends on its purpose and is a legal question. What the result gives you is the factual basis for making that judgement.",
+        },
+        {
+          q: "What happens to the address I enter?",
+          a: "The address and the result stay in memory for five minutes so that checking the same page again does not trigger another page load. To limit request volume your IP address is held for at most ten minutes. Nothing is stored permanently.",
+        },
+      ],
     },
   },
 } as const satisfies Record<Locale, unknown>;

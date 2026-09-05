@@ -1,0 +1,105 @@
+---
+/**
+ * Entity schema for the homepage.
+ *
+ * Everything else on the site described the business to people; nothing
+ * described it to a machine. Search engines and answer engines both work from
+ * entities, so this states — in a parseable form — who runs the site, what
+ * they do, and what the site is.
+ *
+ * **Person + Organization + WebSite, deliberately NOT ProfessionalService or
+ * LocalBusiness.** Those are local-business types and expect a place people
+ * visit; the address in the Impressum is a c/o forwarding service shared with
+ * many other businesses, so publishing it as a business location would tie
+ * this entity to an unrelated building and invite a local listing nobody can
+ * visit. `areaServed` carries the geography instead, which is the part that
+ * is actually true.
+ *
+ * `sameAs` is absent on purpose: no profile URLs exist anywhere in this
+ * repository, and inventing them would be fabricating identity claims. Add
+ * LinkedIn/GitHub/Xing here when you want them — that is the single strongest
+ * signal for tying this Person to the same Person elsewhere.
+ *
+ * `knowsAbout` is not marketing: every entry is a discipline the site already
+ * describes in the Services and About sections.
+ */
+import { legalContact } from "../../i18n/legal";
+import { portfolio } from "../../i18n/portfolio";
+import { ui, type Locale } from "../../i18n/ui";
+
+interface Props {
+  lang: Locale;
+}
+
+const { lang } = Astro.props;
+const site = Astro.site!.href.replace(/\/$/, "");
+const t = ui[lang];
+
+const personId = `${site}/#philipp-jaeckle`;
+const orgId = `${site}/#datapip`;
+
+const knowsAbout =
+  lang === "de"
+    ? [
+        "Web Analytics",
+        "Tag Management",
+        "Server-Side Tracking",
+        "Consent Management",
+        "Data Layer",
+        "Google Tag Manager",
+        "Adobe Analytics",
+        "DSGVO",
+        "TDDDG",
+      ]
+    : [
+        "Web analytics",
+        "Tag management",
+        "Server-side tracking",
+        "Consent management",
+        "Data layer",
+        "Google Tag Manager",
+        "Adobe Analytics",
+        "GDPR",
+        "ePrivacy",
+      ];
+
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Person",
+      "@id": personId,
+      name: "Philipp Jäckle",
+      url: `${site}/${lang}/`,
+      email: `mailto:${portfolio[lang].contact.email}`,
+      jobTitle: lang === "de" ? "Digital Analyst" : "Digital analyst",
+      description: t.meta.description,
+      knowsAbout,
+      worksFor: { "@id": orgId },
+      knowsLanguage: ["de", "en"],
+    },
+    {
+      "@type": "Organization",
+      "@id": orgId,
+      name: "datapip",
+      legalName: legalContact[lang].name,
+      url: `${site}/`,
+      email: `mailto:${portfolio[lang].contact.email}`,
+      founder: { "@id": personId },
+      areaServed: { "@type": "Country", name: "Germany" },
+      vatID: legalContact[lang].taxId,
+      logo: `${site}/static/og/datapip-og.png`,
+    },
+    {
+      "@type": "WebSite",
+      "@id": `${site}/#website`,
+      url: `${site}/`,
+      name: "datapip.de",
+      inLanguage: t.htmlLang,
+      publisher: { "@id": orgId },
+    },
+  ],
+};
+---
+
+<script type="application/ld+json" is:inline set:html={JSON.stringify(schema)} />

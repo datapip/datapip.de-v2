@@ -1,0 +1,48 @@
+---
+/**
+ * The FAQ block, shared by the product pages and the tool pages.
+ *
+ * Native <details>/<summary>, so a page carrying an FAQ still ships zero JS —
+ * this markup was already on the product pages and is lifted here unchanged
+ * rather than written twice.
+ *
+ * The caller is responsible for the FAQPage JSON-LD; the two live next to
+ * each other in ProductPage and ToolPage so the visible answers and the
+ * structured ones cannot drift apart.
+ */
+import Section from "./Section.astro";
+
+export interface FaqItem {
+  q: string;
+  a: string;
+}
+
+interface Props {
+  eyebrow: string;
+  title: string;
+  items: readonly FaqItem[];
+}
+
+const { eyebrow, title, items } = Astro.props;
+---
+
+<Section id="faq" eyebrow={eyebrow} heading={title}>
+  <div class="max-w-[72ch]">
+    {
+      items.map((item) => (
+        <details class="group border-t border-rule last:border-b">
+          <summary class="flex cursor-pointer list-none items-baseline gap-4 py-5 font-semibold marker:hidden [&::-webkit-details-marker]:hidden">
+            <span
+              class="label shrink-0 text-signal transition-transform group-open:rotate-90"
+              aria-hidden="true"
+            >
+              &rsaquo;
+            </span>
+            <span class="min-w-0">{item.q}</span>
+          </summary>
+          <p class="pb-6 pl-8 text-[0.94rem] text-fg-muted">{item.a}</p>
+        </details>
+      ))
+    }
+  </div>
+</Section>

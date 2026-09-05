@@ -16,6 +16,7 @@
  * that variation through as props and would read worse than the duplication.
  */
 import Base from "../layouts/Base.astro";
+import Faq, { type FaqItem } from "./Faq.astro";
 import type { Locale } from "../i18n/ui";
 
 interface Props {
@@ -26,13 +27,37 @@ interface Props {
   eyebrow: string;
   heading: string;
   lede: string;
+  faq?: { eyebrow: string; title: string; items: readonly FaqItem[] };
 }
 
-const { lang, title, description, keywords, eyebrow, heading, lede } =
+const { lang, title, description, keywords, eyebrow, heading, lede, faq } =
   Astro.props;
+
+/* Answer-shaped content is what search engines surface and what answer
+   engines quote, so the questions are declared as data as well as rendered. */
+const faqSchema = faq && {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: faq.items.map(({ q, a }) => ({
+    "@type": "Question",
+    name: q,
+    acceptedAnswer: { "@type": "Answer", text: a },
+  })),
+};
 ---
 
 <Base lang={lang} title={title} description={description} keywords={keywords}>
+  {
+    faqSchema && (
+      <script
+        type="application/ld+json"
+        slot="head"
+        is:inline
+        set:html={JSON.stringify(faqSchema)}
+      />
+    )
+  }
+
   <div class="mx-auto max-w-[1280px] px-5 py-16 md:px-8 md:py-24">
     <header class="max-w-[62ch]">
       <p class="label text-signal">{eyebrow}</p>
@@ -42,4 +67,6 @@ const { lang, title, description, keywords, eyebrow, heading, lede } =
 
     <slot />
   </div>
+
+  {faq && <Faq eyebrow={faq.eyebrow} title={faq.title} items={faq.items} />}
 </Base>

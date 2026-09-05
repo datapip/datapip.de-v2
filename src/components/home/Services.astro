@@ -1,6 +1,6 @@
 ---
 import Section from "../Section.astro";
-import { ui, sections, type Locale } from "../../i18n/ui";
+import { ui, sections, routes, type Locale } from "../../i18n/ui";
 
 interface Props {
   lang: Locale;
@@ -9,6 +9,7 @@ interface Props {
 const { lang } = Astro.props;
 const t = ui[lang].services;
 const id = sections[lang].services;
+const r = routes[lang];
 ---
 
 <Section id={id} eyebrow={t.eyebrow} heading={t.heading} lede={t.lede}>
@@ -33,6 +34,24 @@ const id = sections[lang].services;
               </li>
             ))}
           </ul>
+
+          {/* The homepage previously linked nowhere from its body — every
+              route was reachable only through the nav. A card that names a
+              tool should be the path to it, for a reader and for a crawler. */}
+          {"links" in item && (
+            <ul class="mt-5 flex flex-wrap gap-x-5 gap-y-2 border-t border-rule pt-5">
+              {item.links.map((link) => (
+                <li>
+                  <a
+                    href={`/${lang}/${r[link.route as keyof typeof r]}/`}
+                    class="label inline-block py-1.5 text-signal transition-colors hover:text-fg"
+                  >
+                    {link.label} &rarr;
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
         </li>
       ))
     }
