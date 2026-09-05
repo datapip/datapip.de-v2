@@ -14,7 +14,7 @@
 - **Analytics:** self-hosted Umami, **client-side only** — cookieless, no consent gate, no middleware, no per-route allowlist (see Analytics)
 - **Sitemap:** `@astrojs/sitemap`, locale-aware
 
-The homepage ships a single inlined ~3KB module for the scanner and nothing else; every page also loads the Umami script from the site's own subdomain. Every other page is otherwise zero-JS. Keep it that way: reach for a framework island only if a feature genuinely cannot be done in that budget.
+Two pages ship JavaScript, both vanilla and both bundled by Vite: the homepage's ~3 KB scanner module, and the de-coder's ~11 KB gzipped module (json5 + js-md5 dominate it — see **The de-coder**). Every other page is zero-JS. Every page also loads the Umami script from the site's own subdomain. **No framework runtime ships anywhere.** Keep it that way: reach for an island only if a feature genuinely cannot be done in that budget, and prefer vanilla when it can.
 
 ## Commands
 
@@ -32,7 +32,7 @@ The homepage ships a single inlined ~3KB module for the scanner and nothing else
 HOST=0.0.0.0 PORT=4321 node dist/server/entry.mjs
 ```
 
-Prerendered: both homepages, all four legal pages and all four product pages. On demand: `/` (Accept-Language redirect), `/404`, both contact pages, and `/api/scan`. The host needs Chromium and, for the contact form, the SMTP variables — both are optional to *build*, but the scanner 502s and the form reports a config error without them.
+Prerendered: both homepages, all four legal pages, all four product pages and both de-coder pages. On demand: `/` (Accept-Language redirect), `/404`, both contact pages, and `/api/scan`. The host needs Chromium and, for the contact form, the SMTP variables — both are optional to *build*, but the scanner 502s and the form reports a config error without them.
 
 ## Documentation files
 
@@ -56,6 +56,7 @@ src/
     portfolio.ts   Projects (with typed image imports), testimonials, CV, contact
     legal.ts       Operator data (verbatim from v1) + imprint and privacy copy
     products.ts    Both product pages: copy, metadata and JSON-LD source
+    decoder.ts     De-coder copy; the placeholder pairs double as a fixture
   lib/
     contact.ts       Validation, honeypot and SMTP send for the contact form
     is-public-url.ts SSRF guard — every crawl target must pass through it
@@ -66,6 +67,7 @@ src/
   components/
     Section.astro     Shared section shell: top rule, mono eyebrow, h2, lede
     ContactForm.astro Progressively-enhanced form (works with JS disabled)
+    DecoderPanel.astro The de-coder tool — vanilla island, ~11 KB gzipped
     layout/           Nav.astro, Footer.astro
     legal/            LegalPage, LegalSection, LegalContactCard, LegalResponsible
     product/          ProductPage.astro — the whole product page, both products
@@ -79,6 +81,7 @@ src/
     de/impressum.astro   de/datenschutz.astro
     en/index.astro   en/contact.astro
     en/imprint.astro     en/privacy.astro
+    de/de-kodierer.astro en/de-coder.astro
     de/products/  en/products/   braze-sgtm-proxy.astro, shopify-gtm-setup.astro
   assets/projects/   Project screenshots — optimised by astro:assets
   styles/global.css  Tailwind import, @theme tokens, @utility, base layer
@@ -223,6 +226,39 @@ Each page emits one `application/ld+json` graph: `SoftwareApplication` + `Breadc
 
 `keywords`, `ogImage` and a `head` slot, all optional and all used by these pages. `ogImage` matters: the share image is rendered as **JPEG** via `getImage()`, because social scrapers handle WebP unreliably. The on-page `<Image>` stays AVIF like everywhere else.
 
+## The de-coder
+
+`DecoderPanel.astro` + `src/i18n/decoder.ts`, on `/de/de-kodierer/` and `/en/de-coder/`. Encode/decode (URL, Base64), hash (MD5, SHA-1/256/512), and format (JSON, querystring→JSON).
+
+**Built as a vanilla island, not a React one** — the decision the roadmap asked to record. v1 was a React component on Shadcn Select/Textarea/Button; the whole tool is eight pure functions behind a `<select>` and two `<textarea>`s, so a framework runtime earned nothing. Bundle: **~36 KB raw / ~11 KB gzipped**, the page's only script besides the analytics tag. A React island would have been roughly four times that.
+
+Two client dependencies:
+
+| Dep | Why | Note |
+|---|---|---|
+| `json5` | v1 parsed leniently — unquoted keys, trailing commas, comments, hex all work | Imported as **`json5/lib/parse`**, not the package root. The root is CJS with one default export, so `stringify` cannot be tree-shaken out; the deep import saves 2.7 KB gzipped. |
+| `js-md5` | Web Crypto has no MD5 | SHA-1/256/512 come from `crypto.subtle.digest` for free, so this is the only hash that needs a library. |
+
+`crypto.subtle` needs a secure context. Fine on https and localhost; hashing silently has no `subtle` to call over plain http on a LAN IP.
+
+### The placeholders are the test fixture
+
+Every output placeholder in `decoder.ts` is the real result of running that action on the matching input placeholder. That makes them a parity harness: drive the UI with each input placeholder and the output must equal the output placeholder — **all eight, with no exceptions**. If a change breaks one, either the change or the placeholder is wrong; decide which before moving on.
+
+(Input placeholders are *not* part of that guarantee. They illustrate what a person types, so the `f:json` reverse round-trip returns minified JSON where the input placeholder has a space after the colon. That is expected.)
+
+**Two v1 hash placeholders were wrong and are corrected here.** The English `h:sha1` value was `sha1("This is a test")` — capital T, a different string than the input placeholder states — and the English `h:sha512` value matches no plausible input at all. Both German values were already correct. They now hold the real digests of `"this is a test"`, verified against Node's `crypto` (what v1 hashed with). A hashing tool that displays a wrong hash is a defect, not copy.
+
+### Ported quirks, kept on purpose
+
+`btoa` still throws on non-Latin1 input, and `formatQS` still coerces number-like values through `parseFloat` — so `?b=0` yields the *string* `"0"` because `parseFloat("0")` is falsy. Both match v1 exactly. Matching v1's output is the requirement; tidying these would be a behaviour change.
+
+### One deliberate divergence from v1
+
+**`f:qs-json` indents its output; v1 emitted it minified.** Both format actions sit under the same "formatieren" / "format" button and `f:json` has always indented, so minified output there read as an oversight, not a decision. The reverse direction is unaffected — JSON5 parses indented and minified alike, verified by the round-trip.
+
+v1's two format placeholders were adjusted to match: both now show the real 4-space output rather than v1's 2-space (`f:json`) and minified (`f:qs-json`) examples, neither of which matched its own tool's output.
+
 ## Environment
 
 Copy `.env.example` to `.env`. All vars are declared in `astro.config.mjs` under `env.schema` and read through `astro:env/server`, so they are typed and never reach the client. All are **optional**: without them the contact form still renders and validates, but reports a configuration error instead of sending.
@@ -234,9 +270,22 @@ SMTP_HOST  SMTP_PORT  SMTP_USER  SMTP_PASS  FROM_EMAIL  TO_EMAIL
 ## Adding a page — checklist
 
 1. Create it under **both** `src/pages/de/` and `src/pages/en/`.
-2. Add the slug to `routes` in `src/i18n/ui.ts` (both locales).
+2. Add the slug to `routes` in `src/i18n/ui.ts` (both locales). This is also what makes `switchLocalePath()` produce the right `hreflang` alternate — there is no second place to register it.
 3. Add copy to `src/i18n/`.
-4. Confirm it appears in `dist/client/sitemap-0.xml` after a build.
+4. **If it belongs in the nav, flip its `ready` flag to `true`** in `nav.groups` (both locales) — see **Navigation**.
+5. Confirm it appears in `dist/client/sitemap-0.xml` after a build.
+
+## Navigation
+
+`Nav.astro`, zero-JS. Three homepage anchors inline, then two dropdowns — **Produkte / Products** (the two paid pages) and **Tools** (the three free ones).
+
+v1 filed all five under a single "Produkte" menu, which advertised free tools as products. v2 splits them, matching the language the Services section already uses.
+
+- Both dropdowns are `<details>` with a shared `name`, which makes them an **exclusive accordion**: opening one closes the other, no JavaScript. Browsers without that support just allow both open — harmless.
+- On mobile the groups are flattened into labelled sections inside the existing menu rather than nested disclosures, so a tool is never two taps away.
+- Product paths come from `products.ts`, tool paths from `routes`; `Nav.astro` only joins them, so no slug is restated and none can drift.
+
+**`ready: false` hides an entry whose page does not exist yet.** The cookie scanner and data layer checker are set false until steps 4 and 5 land. Flip the flag in the same change that adds the page, never before — a nav link to a 404 is worse than no link.
 
 ## Content integrity
 
@@ -286,18 +335,9 @@ Ordered by dependency and by damage-if-missing, not by fun. Each step is indepen
 - Client-side Umami analytics, no consent gate (see Analytics)
 - Legal pages — Impressum, Datenschutz, Imprint, Privacy (see **Legal pages** below)
 - Product pages — Braze sGTM proxy and Shopify GTM setup, both locales (see **Product pages** below)
+- De-coder tool — vanilla island, both locales (see **The de-coder** below)
 
-### Step 3 — De-coder ⟵ do this first
-
-**Why now:** the cheapest of the three tools — 461 lines, pure client-side, no API, no Playwright.
-
-- Port `app/[lang]/(shared)/(de-coder)/decoder.tsx`. Needs the `json5` dependency for lenient parsing.
-- This is genuinely interactive. Either write it as a vanilla island like `ScanPanel.astro`, or add `@astrojs/react` and reuse the v1 component. **Prefer vanilla** — one React island pulls ~45 KB onto that page. Decide deliberately and record the decision here.
-- Routes: `de/de-kodierer.astro`, `en/de-coder.astro`.
-
-**Done when:** decoding matches v1 for the same inputs, including malformed-JSON handling, and the page ships no framework runtime unless the decision above says otherwise.
-
-### Step 4 — Cookie scanner page + full report
+### Step 4 — Cookie scanner page + full report ⟵ do this first
 
 **Why now:** the API already exists; this unlocks the "full report" link the hero deliberately does not yet have.
 
@@ -305,6 +345,7 @@ Ordered by dependency and by damage-if-missing, not by fun. Each step is indepen
 - Keep the hero's truncated view; the page shows everything.
 - The v1 crawler accepts an optional `cssSelector` to click a consent banner and re-scan. That is what makes a *before/after consent* comparison possible — the strongest version of this tool. Port it.
 - Add the "full report" link to `ScanPanel.astro` **only once this page exists**.
+- Flip `ready: true` for `cookieScanner` in `nav.groups` (both locales) so it appears in the Tools menu.
 - Routes: `de/cookie-scanner.astro`, `en/cookie-crawler.astro`.
 
 **Done when:** the page renders a full scan, the hero links to it, and the SSRF/concurrency/rate-limit guards still hold on the extended endpoint.
@@ -319,6 +360,7 @@ Ordered by dependency and by damage-if-missing, not by fun. Each step is indepen
 - Apply a rate limit at least as strict as the scanner's.
 - UI from `app/[lang]/(shared)/(checker)/*.tsx` (~500 lines).
 - Routes: `de/data-layer-checker.astro`, `en/data-layer-crawler.astro`.
+- Flip `ready: true` for `dataLayerChecker` in `nav.groups` (both locales) so it appears in the Tools menu.
 
 **Done when:** a 50-URL batch completes, a 51st is rejected, a private URL anywhere in the batch is rejected, and two concurrent batches give the second a busy response.
 
@@ -340,7 +382,7 @@ Every v1 URL must resolve in v2 or 301 somewhere sensible. v1's inventory (from 
 | `/en/imprint`, `/en/privacy` | done |
 | `/de/products/braze-sgtm-proxy`, `/en/products/braze-sgtm-proxy` | done |
 | `/de/products/shopify-gtm-setup`, `/en/products/shopify-gtm-setup` | done |
-| `/de/de-kodierer`, `/en/de-coder` | step 3 |
+| `/de/de-kodierer`, `/en/de-coder` | done |
 | `/de/cookie-scanner`, `/en/cookie-crawler` | step 4 |
 | `/de/data-layer-checker`, `/en/data-layer-crawler` | step 5 |
 

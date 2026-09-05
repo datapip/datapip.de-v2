@@ -1,5 +1,6 @@
 ---
 import { ui, sections, routes, switchLocalePath, type Locale } from "../../i18n/ui";
+import { products } from "../../i18n/products";
 
 interface Props {
   lang: Locale;
@@ -17,6 +18,37 @@ const links = t.nav.links.map((link) => ({
   label: link.label,
   href: `/${lang}/#${anchors[link.key as keyof typeof anchors]}`,
 }));
+
+/**
+ * Paths for the dropdown entries. Product slugs are owned by `products.ts`
+ * and tool slugs by `routes`; this only joins them, so neither is restated
+ * here and neither can drift.
+ */
+const paths: Record<string, string> = {
+  brazeProxy: products[lang].brazeProxy.slug,
+  shopifyGtm: products[lang].shopifyGtm.slug,
+  decoder: r.decoder,
+  cookieScanner: r.cookieScanner,
+  dataLayerChecker: r.dataLayerChecker,
+};
+
+/**
+ * `ready: false` hides an entry whose page is not built yet — the cookie
+ * scanner and data layer checker are roadmap steps 4 and 5. Flipping the flag
+ * is what publishes them into the nav, so do it in the same change that adds
+ * the page, never before: a nav link to a 404 is worse than no link.
+ */
+const groups = t.nav.groups
+  .map((group) => ({
+    label: group.label,
+    items: group.items
+      .filter((item) => item.ready)
+      .map((item) => ({
+        label: item.label,
+        href: `/${lang}/${paths[item.route]}/`,
+      })),
+  }))
+  .filter((group) => group.items.length > 0);
 ---
 
 <header class="sticky top-0 z-40 border-b border-rule bg-ground">
@@ -31,17 +63,58 @@ const links = t.nav.links.map((link) => ({
       data<span class="text-signal">pip</span>
     </a>
 
-    {/* Desktop: links inline. */}
+    {/* Desktop: anchors inline, destinations behind disclosures. */}
     <ul class="ml-2 hidden flex-1 items-center gap-6 md:flex">
       {
         links.map((link) => (
-          <li>
+          <li class="flex">
+            {/* flex, like the disclosure summaries below: as an inline box the
+                anchor sits on the <li>'s 24px line box and its text lands ~2px
+                lower than a summary's, which reads as a misaligned nav. */}
             <a
               href={link.href}
-              class="label text-fg-muted transition-colors hover:text-fg"
+              class="label flex items-center text-fg-muted transition-colors hover:text-fg"
             >
               {link.label}
             </a>
+          </li>
+        ))
+      }
+
+      {/* <details> again, for the same reason as the mobile menu: correct
+          expanded/collapsed semantics and keyboard behaviour with no
+          JavaScript. The shared `name` makes them an exclusive accordion, so
+          opening one closes the other — browsers without that support just
+          allow both open, which is harmless. */}
+      {
+        groups.map((group) => (
+          <li class="relative">
+            <details name="nav-group" class="nav-group">
+              <summary class="label flex cursor-pointer list-none items-center gap-1.5 text-fg-muted transition-colors hover:text-fg marker:hidden [&::-webkit-details-marker]:hidden">
+                {group.label}
+                <span class="nav-chevron text-[0.6rem] leading-none" aria-hidden="true">
+                  &#9662;
+                </span>
+              </summary>
+
+              {/* Sized to its own content rather than a fixed width, so the
+                  one-item Tools menu is not a mostly-empty slab. */}
+              <ul class="absolute left-0 top-[calc(100%+0.85rem)] z-50 flex w-max min-w-48 max-w-[22rem] flex-col border border-rule bg-raised">
+                {group.items.map((item) => (
+                  <li class="border-b border-rule last:border-b-0">
+                    <a
+                      href={item.href}
+                      class="label block px-4 py-3 text-fg-muted transition-colors hover:bg-ground hover:text-fg"
+                      data-umami-event="link_open"
+                      data-umami-event-type="navbar"
+                      data-umami-event-name={item.label}
+                    >
+                      {item.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </details>
           </li>
         ))
       }
@@ -68,25 +141,83 @@ const links = t.nav.links.map((link) => ({
           destinations behind a horizontal scroll gesture. <details> gives
           us correct expanded/collapsed semantics with no JavaScript. */}
       <details class="nav-menu relative md:hidden">
+        {/* Icons rather than words, but the words stay as the accessible
+            name — <details> already announces expanded/collapsed, so the
+            label only has to say what the control is. */}
         <summary
-          class="label flex cursor-pointer list-none items-center gap-2 border border-rule px-2 py-1 text-fg-muted marker:hidden [&::-webkit-details-marker]:hidden"
+          class="flex cursor-pointer list-none items-center border border-rule p-1.5 text-fg-muted marker:hidden [&::-webkit-details-marker]:hidden"
         >
-          <span class="nav-menu-open">{t.nav.menuLabel}</span>
-          <span class="nav-menu-close hidden">{t.nav.menuClose}</span>
+          <span class="nav-menu-open flex">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              aria-hidden="true"
+            >
+              <path d="M2 4h12M2 8h12M2 12h12"></path>
+            </svg>
+            <span class="sr-only">{t.nav.menuLabel}</span>
+          </span>
+
+          <span class="nav-menu-close hidden">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              aria-hidden="true"
+            >
+              <path d="M3.5 3.5l9 9M12.5 3.5l-9 9"></path>
+            </svg>
+            <span class="sr-only">{t.nav.menuClose}</span>
+          </span>
         </summary>
 
         <ul
-          class="absolute right-0 top-[calc(100%+0.6rem)] z-50 flex w-52 flex-col border border-rule bg-raised"
+          class="absolute right-0 top-[calc(100%+0.6rem)] z-50 flex w-64 flex-col border border-rule bg-raised"
         >
           {
             links.map((link) => (
-              <li class="border-b border-rule last:border-b-0">
+              <li class="border-b border-rule">
                 <a
                   href={link.href}
                   class="label block px-4 py-3 text-fg-muted transition-colors hover:bg-ground hover:text-fg"
                 >
                   {link.label}
                 </a>
+              </li>
+            ))
+          }
+
+          {/* Flattened into labelled sections rather than nested disclosures:
+              a <details> inside the open menu would put two taps between a
+              visitor and a tool. */}
+          {
+            groups.map((group) => (
+              <li class="border-b border-rule last:border-b-0">
+                <p class="label px-4 pt-3 pb-1 text-fg-faint">{group.label}</p>
+                <ul>
+                  {group.items.map((item) => (
+                    <li>
+                      <a
+                        href={item.href}
+                        class="label block px-4 py-2.5 text-fg-muted transition-colors hover:bg-ground hover:text-fg"
+                        data-umami-event="link_open"
+                        data-umami-event-type="navbar"
+                        data-umami-event-name={item.label}
+                      >
+                        {item.label}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
               </li>
             ))
           }
@@ -102,10 +233,20 @@ const links = t.nav.links.map((link) => ({
     display: none;
   }
   .nav-menu[open] .nav-menu-close {
-    display: inline;
+    display: flex;
   }
   .nav-menu[open] > summary {
     color: var(--color-fg);
     border-color: var(--color-rule-strong);
+  }
+
+  .nav-group[open] > summary {
+    color: var(--color-fg);
+  }
+  .nav-group[open] .nav-chevron {
+    transform: rotate(180deg);
+  }
+  .nav-chevron {
+    transition: transform 150ms ease;
   }
 </style>

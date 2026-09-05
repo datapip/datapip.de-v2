@@ -72,6 +72,31 @@ export const ui = {
         { key: "testimonials", label: "Referenzen" },
         { key: "projects", label: "Projekte" },
       ],
+      groups: [
+        {
+          label: "Produkte",
+          items: [
+            { route: "brazeProxy", label: "Braze sGTM Proxy", ready: true },
+            {
+              route: "shopifyGtm",
+              label: "Shopify GA4 & Google Ads Setup",
+              ready: true,
+            },
+          ],
+        },
+        {
+          label: "Tools",
+          items: [
+            { route: "decoder", label: "De-Kodierer", ready: true },
+            { route: "cookieScanner", label: "Cookie-Scanner", ready: false },
+            {
+              route: "dataLayerChecker",
+              label: "Data-Layer-Checker",
+              ready: false,
+            },
+          ],
+        },
+      ],
       cta: "Anfrage",
       skipToContent: "Zum Inhalt springen",
       languageLabel: "Sprache wechseln",
@@ -204,6 +229,31 @@ export const ui = {
         { key: "services", label: "Services" },
         { key: "testimonials", label: "Testimonials" },
         { key: "projects", label: "Projects" },
+      ],
+      groups: [
+        {
+          label: "Products",
+          items: [
+            { route: "brazeProxy", label: "Braze sGTM Proxy", ready: true },
+            {
+              route: "shopifyGtm",
+              label: "Shopify GA4 & Google Ads Setup",
+              ready: true,
+            },
+          ],
+        },
+        {
+          label: "Tools",
+          items: [
+            { route: "decoder", label: "De-coder", ready: true },
+            { route: "cookieScanner", label: "Cookie Crawler", ready: false },
+            {
+              route: "dataLayerChecker",
+              label: "Data Layer Crawler",
+              ready: false,
+            },
+          ],
+        },
       ],
       cta: "Get in touch",
       skipToContent: "Skip to content",

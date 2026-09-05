@@ -1,0 +1,380 @@
+---
+/**
+ * The de-coder tool: a vanilla island, no framework.
+ *
+ * v1 shipped this as a React component with Shadcn Select/Textarea/Button.
+ * Rebuilt here as one Vite-bundled module against native <select> and
+ * <textarea>, per the zero-framework budget in CLAUDE.md — a React island
+ * would have pulled ~45 KB onto a page whose whole job is eight pure
+ * functions.
+ *
+ * Two dependencies do ship: `json5` for the lenient parsing v1 relied on, and
+ * `js-md5` because Web Crypto has no MD5. SHA-1/256/512 come from
+ * `crypto.subtle` for free.
+ *
+ * json5 is imported as `json5/lib/parse`, not as the package root. The root is
+ * CJS with a single default export, so bundlers cannot tree-shake `stringify`
+ * out of it; the deep import drops 2.7 KB gzipped. Only `parse` is used here.
+ *
+ * Budget: ~36 KB raw / ~11 KB gzipped, and this page's only script.
+ */
+import { decoder, actionLabels, type Action } from "../i18n/decoder";
+import type { Locale } from "../i18n/ui";
+
+interface Props {
+  lang: Locale;
+}
+
+const { lang } = Astro.props;
+const t = decoder[lang];
+
+/* Handed to the client as data so both locales share one bundle. */
+const strings = {
+  inputPlaceholders: t.field2.placeholders,
+  outputPlaceholders: t.field3.placeholders,
+  buttons: t.buttons,
+  error: t.error,
+  errorDefault: t.errorDefault,
+  outputDescription: t.field3.description,
+};
+
+const groups: { label: string; items: Action[] }[] = [
+  { label: t.field.selectLabelList[0], items: ["e:url", "e:base64"] },
+  {
+    label: t.field.selectLabelList[1],
+    items: ["h:md5", "h:sha1", "h:sha256", "h:sha512"],
+  },
+  { label: t.field.selectLabelList[2], items: ["f:json", "f:qs-json"] },
+];
+
+const fieldClass =
+  "mt-3 block w-full min-w-0 border border-rule bg-ground px-3 py-2.5 font-mono text-data text-fg placeholder:text-fg-faint focus-visible:border-signal";
+---
+
+<section class="border border-rule bg-raised" data-decoder>
+  <header
+    class="flex items-center gap-3 border-b border-rule px-4 py-3 md:px-5"
+  >
+    <span class="label text-fg-muted">{t.panelTitle}</span>
+  </header>
+
+  <div class="space-y-8 p-4 md:p-5">
+    {/* Action */}
+    <div class="min-w-0">
+      <label class="label block text-fg" for="decoder-action">
+        {t.field.label}
+      </label>
+      <p class="mt-2 text-[0.85rem] text-fg-muted">{t.field.description}</p>
+
+      <select
+        id="decoder-action"
+        class={`${fieldClass} max-w-xs`}
+        data-decoder-action
+      >
+        {
+          groups.map((group) => (
+            <optgroup label={group.label}>
+              {group.items.map((value) => (
+                <option value={value}>{actionLabels[value]}</option>
+              ))}
+            </optgroup>
+          ))
+        }
+      </select>
+    </div>
+
+    {/* Input */}
+    <div class="min-w-0">
+      <label class="label block text-fg" for="decoder-input">
+        {t.field2.label}
+      </label>
+      <p class="mt-2 text-[0.85rem] text-fg-muted">{t.field2.description}</p>
+
+      <textarea
+        id="decoder-input"
+        rows="4"
+        spellcheck="false"
+        placeholder={t.field2.placeholders["e:url"]}
+        class={`${fieldClass} resize-y`}
+        data-decoder-input></textarea>
+    </div>
+
+    {/* Controls. Labels and visibility follow the selected action. */}
+    <div class="flex flex-col gap-3 sm:flex-row">
+      <button
+        type="button"
+        disabled
+        class="label bg-signal px-5 py-3 font-medium text-signal-ink transition-opacity hover:opacity-90 disabled:opacity-40 sm:w-52"
+        data-umami-event="tool_use"
+        data-umami-event-type="decoder"
+        data-decoder-forward
+      >
+        {/* compressHTML strips whitespace between inline elements. */}
+        <span aria-hidden="true">&darr;</span>{" "}
+        <span data-decoder-forward-label></span>
+      </button>
+
+      <button
+        type="button"
+        disabled
+        class="label border border-rule px-5 py-3 text-fg-muted transition-colors hover:border-rule-strong hover:text-fg disabled:opacity-40 sm:w-52"
+        data-umami-event="tool_use"
+        data-umami-event-type="decoder"
+        data-decoder-reverse
+      >
+        <span aria-hidden="true">&uarr;</span>{" "}
+        <span data-decoder-reverse-label></span>
+      </button>
+    </div>
+
+    {/* Output */}
+    <div class="min-w-0">
+      <label class="label block text-fg" for="decoder-output">
+        {t.field3.label}
+      </label>
+      <p class="mt-2 text-[0.85rem] text-fg-muted" data-decoder-output-desc>
+        {t.field3.description}
+      </p>
+
+      <textarea
+        id="decoder-output"
+        rows="4"
+        spellcheck="false"
+        placeholder={t.field3.placeholders["e:url"]}
+        class={`${fieldClass} resize-y`}
+        data-decoder-output></textarea>
+    </div>
+  </div>
+
+  <div
+    hidden
+    class="border-t border-rule px-4 py-3 md:px-5"
+    aria-live="polite"
+    data-decoder-error
+  >
+    <p class="label text-crit">{t.error}</p>
+    <p class="mt-1 text-[0.85rem] text-fg-muted" data-decoder-error-message></p>
+  </div>
+
+  <noscript>
+    <p class="border-t border-rule px-4 py-3 text-[0.8rem] text-warn md:px-5">
+      {t.noscript}
+    </p>
+  </noscript>
+</section>
+
+{/* A data blob, not a module — inline is correct here. */}
+<script
+  is:inline
+  type="application/json"
+  data-decoder-strings
+  set:html={JSON.stringify(strings)}
+/>
+
+<script>
+  import parseJSON5 from "json5/lib/parse";
+  import { md5 } from "js-md5";
+
+  type Action =
+    | "e:url"
+    | "e:base64"
+    | "h:md5"
+    | "h:sha1"
+    | "h:sha256"
+    | "h:sha512"
+    | "f:json"
+    | "f:qs-json";
+
+  const root = document.querySelector<HTMLElement>("[data-decoder]");
+  if (root) {
+    const actionEl = root.querySelector<HTMLSelectElement>("[data-decoder-action]")!;
+    const inputEl = root.querySelector<HTMLTextAreaElement>("[data-decoder-input]")!;
+    const outputEl = root.querySelector<HTMLTextAreaElement>("[data-decoder-output]")!;
+    const forwardEl = root.querySelector<HTMLButtonElement>("[data-decoder-forward]")!;
+    const reverseEl = root.querySelector<HTMLButtonElement>("[data-decoder-reverse]")!;
+    const forwardLabel = root.querySelector<HTMLElement>("[data-decoder-forward-label]")!;
+    const reverseLabel = root.querySelector<HTMLElement>("[data-decoder-reverse-label]")!;
+    const outputDesc = root.querySelector<HTMLElement>("[data-decoder-output-desc]")!;
+    const errorBox = root.querySelector<HTMLElement>("[data-decoder-error]")!;
+    const errorMessage = root.querySelector<HTMLElement>("[data-decoder-error-message]")!;
+
+    const strings = JSON.parse(
+      document.querySelector("[data-decoder-strings]")?.textContent ?? "{}",
+    );
+
+    const action = () => actionEl.value as Action;
+
+    /* ---------------------------------------------------------------- *
+     * Transforms. Ported from v1 one for one, quirks included: `btoa`
+     * still throws on non-Latin1 input and formatQS still coerces
+     * number-like values, because matching v1's output is the point.
+     * ---------------------------------------------------------------- */
+
+    function formatJSON(value: string) {
+      return JSON.stringify(parseJSON5(value), null, 4);
+    }
+
+    function unformatJSON(value: string) {
+      return JSON.stringify(parseJSON5(value));
+    }
+
+    function formatQS(value: string) {
+      const queryString = value.startsWith("?") ? value.slice(1) : value;
+      const result: Record<string, string | number> = {};
+
+      for (const pair of queryString.split("&")) {
+        const [key, raw] = pair.split("=");
+        result[decodeURIComponent(key)] = parseFloat(raw)
+          ? parseFloat(raw)
+          : decodeURIComponent(raw || "");
+      }
+
+      // Indented, unlike v1, which emitted this minified. Both actions sit
+      // under the "format" button and `f:json` indents; producing minified
+      // JSON here read as an oversight rather than a choice. The reverse
+      // direction is unaffected — JSON5 parses either form.
+      return JSON.stringify(result, null, 4);
+    }
+
+    function unformatQS(value: string) {
+      const result = parseJSON5(value);
+      const queryString = Object.keys(result)
+        .map(
+          (key) =>
+            `${encodeURIComponent(key)}=${encodeURIComponent(result[key])}`,
+        )
+        .join("&");
+
+      return "?" + queryString;
+    }
+
+    /* v1 hashed with Node's `crypto`. In the browser SHA-1/256/512 come from
+       Web Crypto; MD5 has no native equivalent, hence js-md5. Both produce
+       the same hex digests as v1 — the output placeholders are the fixture. */
+    async function hash(algorithm: Action, value: string) {
+      if (algorithm === "h:md5") return md5(value);
+
+      const name = { "h:sha1": "SHA-1", "h:sha256": "SHA-256", "h:sha512": "SHA-512" }[
+        algorithm as "h:sha1" | "h:sha256" | "h:sha512"
+      ];
+
+      const digest = await crypto.subtle.digest(
+        name,
+        new TextEncoder().encode(value),
+      );
+
+      return [...new Uint8Array(digest)]
+        .map((byte) => byte.toString(16).padStart(2, "0"))
+        .join("");
+    }
+
+    /* ------------------------------- UI ------------------------------- */
+
+    function clearError() {
+      errorBox.hidden = true;
+      errorMessage.textContent = "";
+    }
+
+    function showError(error: unknown) {
+      errorMessage.textContent =
+        error instanceof Error ? error.message : strings.errorDefault;
+      errorBox.hidden = false;
+    }
+
+    function syncControls() {
+      const current = action();
+      const kind = current.slice(0, 2);
+
+      inputEl.placeholder = strings.inputPlaceholders[current] ?? "";
+      outputEl.placeholder = strings.outputPlaceholders[current] ?? "";
+
+      if (kind === "e:") {
+        forwardLabel.textContent = strings.buttons.encodeList[0];
+        reverseLabel.textContent = strings.buttons.encodeList[1];
+      } else if (kind === "f:") {
+        forwardLabel.textContent = strings.buttons.formatList[0];
+        reverseLabel.textContent = strings.buttons.formatList[1];
+      } else {
+        forwardLabel.textContent = strings.buttons.hash;
+      }
+
+      // Hashing is one-way, so the reverse control and the output hint that
+      // explains it both go away.
+      const reversible = kind !== "h:";
+      reverseEl.hidden = !reversible;
+      outputDesc.hidden = !reversible;
+
+      forwardEl.disabled = inputEl.value.length === 0;
+      reverseEl.disabled = !reversible || outputEl.value.length === 0;
+
+      // v1 had a separate button per operation, each with its own Umami
+      // event name. Here two buttons cover all five, so the name is kept in
+      // sync with the action rather than written during the click — Umami
+      // reads the attribute from its own delegated handler.
+      forwardEl.dataset.umamiEventName =
+        kind === "e:" ? "encode" : kind === "h:" ? "hash" : "format";
+      reverseEl.dataset.umamiEventName = kind === "e:" ? "decode" : "unformat";
+    }
+
+    async function runForward() {
+      const current = action();
+      if (!inputEl.value) return;
+
+      try {
+        let result: string | undefined;
+
+        if (current === "e:url") result = encodeURI(inputEl.value);
+        else if (current === "e:base64") result = btoa(inputEl.value);
+        else if (current.startsWith("h:")) result = await hash(current, inputEl.value);
+        else if (current === "f:json") result = formatJSON(inputEl.value);
+        else if (current === "f:qs-json") result = formatQS(inputEl.value);
+
+        if (result !== undefined) outputEl.value = result;
+        clearError();
+      } catch (error) {
+        showError(error);
+      }
+
+      syncControls();
+    }
+
+    function runReverse() {
+      const current = action();
+      if (!outputEl.value) return;
+
+      try {
+        let result: string | undefined;
+
+        if (current === "e:url") result = decodeURI(outputEl.value);
+        else if (current === "e:base64") result = atob(outputEl.value);
+        else if (current === "f:json") result = unformatJSON(outputEl.value);
+        else if (current === "f:qs-json") result = unformatQS(outputEl.value);
+
+        if (result !== undefined) inputEl.value = result;
+        clearError();
+      } catch (error) {
+        showError(error);
+      }
+
+      syncControls();
+    }
+
+    // v1 cleared the error whenever any of the three inputs changed.
+    actionEl.addEventListener("change", () => {
+      clearError();
+      syncControls();
+    });
+
+    for (const el of [inputEl, outputEl]) {
+      el.addEventListener("input", () => {
+        clearError();
+        syncControls();
+      });
+    }
+
+    forwardEl.addEventListener("click", runForward);
+    reverseEl.addEventListener("click", runReverse);
+
+    syncControls();
+  }
+</script>
