@@ -121,7 +121,7 @@ export const scanner = {
       items: [
         {
           q: "Was genau wird geprüft?",
-          a: "Die angegebene Adresse wird von unserem Server in einem echten Browser geladen ohne den Consent-Banner anzuklicken. Erfasst werden Cookies, Local- und Session-Storage sowie alle Requests samt fremder Hosts."
+          a: "Die angegebene Adresse wird von unserem Server in einem echten Browser geladen, ohne den Consent-Banner anzuklicken. Erfasst werden Cookies, Local- und Session-Storage sowie alle Requests samt fremder Hosts."
         },
         {
           q: "Warum setzt eine Seite überhaupt Cookies vor der Einwilligung?",
