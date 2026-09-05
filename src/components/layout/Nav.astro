@@ -122,10 +122,13 @@ const groups = t.nav.groups
     </ul>
 
     <div class="ml-auto flex shrink-0 items-center gap-3">
+      {/* The visible text is the language code, so the accessible name has to
+          contain it — WCAG 2.5.3, and the name is what voice control listens
+          for. A bare "Sprache wechseln" replaced it. */}
       <a
         href={otherHref}
         hreflang={other}
-        aria-label={t.nav.languageLabel}
+        aria-label={`${t.nav.languageLabel}: ${other.toUpperCase()}`}
         class="label border border-rule px-2 py-1 text-fg-muted transition-colors hover:border-rule-strong hover:text-fg"
       >
         {other}
