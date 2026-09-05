@@ -1,0 +1,36 @@
+---
+/**
+ * Shell shared by all four legal pages: metadata, the page header and the
+ * reading column the numbered clauses sit in.
+ *
+ * These pages carry the single h1; every clause below is an h2, so the
+ * outline stays flat and in order.
+ */
+import Base from "../../layouts/Base.astro";
+import type { Locale } from "../../i18n/ui";
+
+interface Props {
+  lang: Locale;
+  title: string;
+  description: string;
+  eyebrow: string;
+  heading: string;
+  updated?: string;
+}
+
+const { lang, title, description, eyebrow, heading, updated } = Astro.props;
+---
+
+<Base lang={lang} title={title} description={description}>
+  <div class="mx-auto max-w-[1280px] px-5 py-16 md:px-8 md:py-24">
+    <header class="max-w-[52ch]">
+      <p class="label text-signal">{eyebrow}</p>
+      <h1 class="mt-4 text-h2 font-semibold">{heading}</h1>
+      {updated && <p class="label mt-5 text-fg-faint">{updated}</p>}
+    </header>
+
+    <div class="mt-6 max-w-[78ch]">
+      <slot />
+    </div>
+  </div>
+</Base>

@@ -1,0 +1,64 @@
+---
+/**
+ * The §5 TMG operator details, set as a spec table: mono labels in the left
+ * track, values on the right. Values come from `legalContact`, which is the
+ * verbatim port of v1's `lib/const.ts`.
+ */
+import { legalContact, legal } from "../../i18n/legal";
+import { routes, type Locale } from "../../i18n/ui";
+
+interface Props {
+  lang: Locale;
+}
+
+const { lang } = Astro.props;
+
+const contact = legalContact[lang];
+const labels = legal[lang].imprint.labels;
+const contactHref = `/${lang}/${routes[lang].contact}/`;
+---
+
+<dl class="border border-rule">
+  <div
+    class="grid gap-1 border-b border-rule px-5 py-4 md:grid-cols-[10rem_minmax(0,1fr)] md:gap-6"
+  >
+    <dt class="label text-fg-faint">{labels.name}</dt>
+    <dd class="min-w-0">{contact.name}</dd>
+  </div>
+
+  <div
+    class="grid gap-1 border-b border-rule px-5 py-4 md:grid-cols-[10rem_minmax(0,1fr)] md:gap-6"
+  >
+    <dt class="label text-fg-faint">{labels.address}</dt>
+    <dd class="min-w-0">
+      {contact.address.map((line) => <span class="block">{line}</span>)}
+    </dd>
+  </div>
+
+  <div
+    class="grid gap-1 border-b border-rule px-5 py-4 md:grid-cols-[10rem_minmax(0,1fr)] md:gap-6"
+  >
+    <dt class="label text-fg-faint">{labels.email}</dt>
+    <dd class="min-w-0">
+      <a
+        href={`mailto:${contact.email}`}
+        class="font-mono text-data text-signal underline-offset-4 hover:underline"
+      >
+        {contact.email}
+      </a>
+      <a
+        href={contactHref}
+        class="mt-1 block text-fg-muted underline underline-offset-4 transition-colors hover:text-fg"
+      >
+        {labels.contactForm}
+      </a>
+    </dd>
+  </div>
+
+  <div
+    class="grid gap-1 px-5 py-4 md:grid-cols-[10rem_minmax(0,1fr)] md:gap-6"
+  >
+    <dt class="label text-fg-faint">{labels.taxId}</dt>
+    <dd class="min-w-0 font-mono text-data tabular-nums">{contact.taxId}</dd>
+  </div>
+</dl>

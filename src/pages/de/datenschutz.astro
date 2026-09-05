@@ -1,0 +1,27 @@
+---
+import LegalPage from "../../components/legal/LegalPage.astro";
+import LegalSection from "../../components/legal/LegalSection.astro";
+import LegalResponsible from "../../components/legal/LegalResponsible.astro";
+import { legal } from "../../i18n/legal";
+
+const lang = "de" as const;
+const t = legal[lang].privacy;
+---
+
+<LegalPage
+  lang={lang}
+  title={t.title}
+  description={t.description}
+  eyebrow={t.eyebrow}
+  heading={t.heading}
+  updated={t.updated}
+>
+  <LegalSection index={1} {...t.intro} />
+  <LegalResponsible lang={lang} index={2} />
+
+  {
+    t.sections.map((section, i) => (
+      <LegalSection index={i + 3} {...section} />
+    ))
+  }
+</LegalPage>

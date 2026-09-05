@@ -32,7 +32,7 @@ The homepage ships a single inlined ~3KB module for the scanner and nothing else
 HOST=0.0.0.0 PORT=4321 node dist/server/entry.mjs
 ```
 
-Prerendered: both homepages. On demand: `/` (Accept-Language redirect), `/404`, both contact pages, and `/api/scan`. The host needs Chromium and, for the contact form, the SMTP variables — both are optional to *build*, but the scanner 502s and the form reports a config error without them.
+Prerendered: both homepages and all four legal pages. On demand: `/` (Accept-Language redirect), `/404`, both contact pages, and `/api/scan`. The host needs Chromium and, for the contact form, the SMTP variables — both are optional to *build*, but the scanner 502s and the form reports a config error without them.
 
 ## Documentation files
 
@@ -54,6 +54,7 @@ src/
     ui.ts          Locales, localised route slugs, section anchors, chrome copy,
                    contact-form and 404 copy, switchLocalePath()
     portfolio.ts   Projects (with typed image imports), testimonials, CV, contact
+    legal.ts       Operator data (verbatim from v1) + imprint and privacy copy
   lib/
     contact.ts       Validation, honeypot and SMTP send for the contact form
     is-public-url.ts SSRF guard — every crawl target must pass through it
@@ -65,6 +66,7 @@ src/
     Section.astro     Shared section shell: top rule, mono eyebrow, h2, lede
     ContactForm.astro Progressively-enhanced form (works with JS disabled)
     layout/           Nav.astro, Footer.astro
+    legal/            LegalPage, LegalSection, LegalContactCard, LegalResponsible
     home/             Hero, ScanPanel, Services, Testimonials, Projects,
                       About, Contact
   pages/
@@ -72,7 +74,9 @@ src/
     404.astro        prerender=false; picks its locale from the requested path
     api/scan.ts      prerender=false; the hero cookie scanner endpoint
     de/index.astro   de/kontakt.astro   (kontakt is prerender=false, handles POST)
+    de/impressum.astro   de/datenschutz.astro
     en/index.astro   en/contact.astro
+    en/imprint.astro     en/privacy.astro
   assets/projects/   Project screenshots — optimised by astro:assets
   styles/global.css  Tailwind import, @theme tokens, @utility, base layer
 public/
@@ -155,6 +159,29 @@ One note if you ever go back to v1 for reference: its documentation describes th
 - Copy lives in `src/i18n/`, keyed by locale. No i18n library.
 - Route slugs differ per locale (`cookie-scanner` vs `cookie-crawler`) — always resolve through `routes[lang]`, never hard-code a path.
 - `switchLocalePath()` preserves the trailing slash so `hreflang` alternates and `canonical` agree.
+- **`switchLocalePath()` also translates the slug**, through a reverse `slug → route key` lookup over `routes`. It has to: the English alternate of `/de/impressum/` is `/en/imprint/`, and emitting `/en/impressum/` points both the `hreflang` alternate and the nav language switcher at a 404. It previously swapped only the locale segment, so every non-homepage advertised a broken alternate — the homepages hid it because they have no slug. A slug with no `routes` entry passes through unchanged. **When adding a route, adding it to `routes` is what makes the switcher work** — there is no second place to register it.
+
+## Legal pages
+
+Four pages, one shape: `de/impressum`, `de/datenschutz`, `en/imprint`, `en/privacy`.
+
+- Copy and operator data live in `src/i18n/legal.ts`. `legalContact` is the verbatim port of v1's `lib/const.ts`; the Impressum text is verbatim from v1. **Binding content — copy it, never reword or re-translate it.**
+- Rendered by `components/legal/`: `LegalPage.astro` (shell + metadata), `LegalSection.astro` (one numbered clause), `LegalContactCard.astro` (the imprint spec table), `LegalResponsible.astro` (the privacy address clause).
+- A clause is `{ heading, paragraphs?, items?, outro? }`. `outro` exists so the rights clause keeps v1's order — list first, closing sentence last.
+- Clause numbering is positional: the privacy page renders `intro` as 01, `responsible` as 02, then `sections` from 03. **Inserting a clause renumbers everything below it**, so never cite a clause by number in copy or in an external document.
+
+### The privacy text is not a verbatim port, deliberately
+
+v2's data flows are not v1's, and the policy describes v2. If any of this changes, the policy changes with it:
+
+| Clause | Why it differs from v1 |
+|---|---|
+| Contact form | No PocketBase in v2 — the enquiry is emailed and nothing else. v1 claimed storage. |
+| Cookie scanner | New in v2. Declares server-side fetch, the 5-min result cache and the 10-min per-IP rate-limit hold — the retention numbers come straight from `src/lib/guards.ts`. |
+| Web analytics | Client-side cookieless Umami on the site's own subdomain; no consent gate, no § 25 TDDDG consent needed. v1 described its server-side tracking. |
+| Cookies | **v2 sets none at all.** v1's `verified` and `browserLanguage` cookies are both gone — server-side tracking was not ported, and `pages/index.astro` negotiates the locale from `Accept-Language` without writing anything. |
+
+**Unverified from the repo:** the Hosting (Hetzner) and Cloudflare clauses are carried over from v1 and describe infrastructure, not code. Confirm they still hold before launch.
 
 ## Environment
 
@@ -217,20 +244,9 @@ Ordered by dependency and by damage-if-missing, not by fun. Each step is indepen
 - Localised 404, robots.txt, sitemap, OG image, favicon
 - Hero cookie scanner + `POST /api/scan` with SSRF, concurrency, rate-limit and cache guards
 - Client-side Umami analytics, no consent gate (see Analytics)
+- Legal pages — Impressum, Datenschutz, Imprint, Privacy (see **Legal pages** below)
 
-### Step 1 — Legal pages ⟵ do this first
-
-**Why now:** required by German law (§5 TMG, DSGVO Art. 13), and the footer already links to all four, so they are the only broken links a visitor can currently hit.
-
-- Port from `app/[lang]/(de)/impressum/page.tsx` (105 lines), `(de)/datenschutz/page.tsx` (182 lines) and their `(en)` counterparts.
-- Contact data comes from v1 `lib/const.ts` — move it to `src/i18n/legal.ts`.
-- Copy the text **verbatim**. This is binding content; do not reword or re-translate.
-- The privacy policy must describe what v2 actually does, which is not what v1 did: no PocketBase yet, and the cookie scanner is new — it takes a visitor-supplied URL and loads it server-side. Add a paragraph for it. Analytics also changed: cookieless self-hosted Umami, client-side, no consent gate — describe it as it is (see Analytics), not as v1 described its own.
-- Routes: `de/impressum.astro`, `de/datenschutz.astro`, `en/imprint.astro`, `en/privacy.astro`. Slugs already reserved in `routes`.
-
-**Done when:** all four render, footer links resolve, both appear in `sitemap-0.xml`, and the privacy text matches v2's real data flows.
-
-### Step 2 — Product pages
+### Step 2 — Product pages ⟵ do this first
 
 **Why now:** the only pages that sell something, and `Projects.astro` already links to all four (currently 404).
 
@@ -278,7 +294,7 @@ Ordered by dependency and by damage-if-missing, not by fun. Each step is indepen
 
 ### Backlog — not scheduled
 
-- **PocketBase feedback storage.** v1 also wrote contact submissions to PocketBase (`app/api/feedback/route.tsx`, 38 lines). v2 only emails, which means a failed SMTP send loses the enquiry. Worth adding if that ever bites.
+- **PocketBase feedback storage.** v1's contact form dual-wrote: `components/contact/action.ts` (95 lines) called `sendMail()` and `storeDatabase()` in parallel and returned `success: mailSuccess || storeSuccess` — either channel landing counted as success. (`app/api/feedback/route.tsx` is a *different* endpoint, marked `// needed for browser extensions`, with `source`/`publish` fields the form never sent. Read `action.ts` for the dual-write logic, not that route.) v2 only emails, so a failed SMTP send loses the enquiry. But v1's version was dishonest under partial failure: with SMTP down the visitor saw "sent" while the enquiry sat unread in PocketBase. v2 returns a visible error instead, so the visitor knows to retry or mail directly. **If this is revived, keep the honest failure report** — the point would be durability, not hiding the failure.
 - **Light theme.** The token layer is ready; it is a second block in `global.css` plus a toggle. Only if asked for.
 - **Redis or similar for guard state.** Required before running more than one Node process — see the scanner section.
 - **Tests.** There are none. The highest-value first test is a contrast assertion over the `@theme` tokens, since that constraint is easy to break silently and `astro check` cannot catch it.
@@ -290,8 +306,8 @@ Every v1 URL must resolve in v2 or 301 somewhere sensible. v1's inventory (from 
 | v1 URL | v2 status |
 |---|---|
 | `/de`, `/en` | done (now `/de/`, `/en/`) |
-| `/de/impressum`, `/de/datenschutz` | step 1 |
-| `/en/imprint`, `/en/privacy` | step 1 |
+| `/de/impressum`, `/de/datenschutz` | done |
+| `/en/imprint`, `/en/privacy` | done |
 | `/de/products/braze-sgtm-proxy`, `/en/products/braze-sgtm-proxy` | step 2 |
 | `/de/products/shopify-gtm-setup`, `/en/products/shopify-gtm-setup` | step 2 |
 | `/de/de-kodierer`, `/en/de-coder` | step 3 |

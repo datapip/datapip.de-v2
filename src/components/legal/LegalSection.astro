@@ -1,0 +1,52 @@
+---
+/**
+ * One numbered clause of a legal document.
+ *
+ * The mono index in the left track is the Instrument tread applied to prose:
+ * a legal text is a specification, so it is set like one. Body content can
+ * come from `paragraphs` / `items` or from the slot, which renders last —
+ * the privacy page uses it to drop the operator address into its clause.
+ */
+import type { LegalSection } from "../../i18n/legal";
+
+interface Props extends LegalSection {
+  index: number;
+}
+
+const { index, heading, paragraphs, items, outro } = Astro.props;
+---
+
+<section
+  class="mt-10 grid gap-x-6 gap-y-4 border-t border-rule pt-8 md:grid-cols-[3.5rem_minmax(0,1fr)]"
+>
+  <p class="label tabular-nums text-fg-faint" aria-hidden="true">
+    {String(index).padStart(2, "0")}
+  </p>
+
+  <div class="min-w-0">
+    <h2 class="text-h3 font-semibold">{heading}</h2>
+
+    {
+      paragraphs?.map((paragraph) => (
+        <p class="mt-4 text-fg-muted">{paragraph}</p>
+      ))
+    }
+
+    {
+      items && (
+        <ul class="mt-4 space-y-2">
+          {items.map((item) => (
+            <li class="flex gap-3 text-fg-muted">
+              <span class="mt-[0.55em] size-1 shrink-0 bg-signal" aria-hidden="true" />
+              <span class="min-w-0">{item}</span>
+            </li>
+          ))}
+        </ul>
+      )
+    }
+
+    {outro?.map((paragraph) => <p class="mt-4 text-fg-muted">{paragraph}</p>)}
+
+    <slot />
+  </div>
+</section>

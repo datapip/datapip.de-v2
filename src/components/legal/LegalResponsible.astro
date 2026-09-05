@@ -1,0 +1,41 @@
+---
+/**
+ * The "responsible party" clause of the privacy policy: the same operator
+ * details as the imprint, but set as an address block inside the prose
+ * rather than as a spec table.
+ */
+import LegalSection from "./LegalSection.astro";
+import { legalContact, legal } from "../../i18n/legal";
+import { routes, type Locale } from "../../i18n/ui";
+
+interface Props {
+  lang: Locale;
+  index: number;
+}
+
+const { lang, index } = Astro.props;
+
+const contact = legalContact[lang];
+const t = legal[lang].privacy.responsible;
+const contactHref = `/${lang}/${routes[lang].contact}/`;
+---
+
+<LegalSection index={index} heading={t.heading} paragraphs={[t.intro]}>
+  <address class="mt-4 not-italic text-fg-muted">
+    <span class="block text-fg">{contact.name}</span>
+    {contact.address.map((line) => <span class="block">{line}</span>)}
+
+    <a
+      href={`mailto:${contact.email}`}
+      class="mt-2 block font-mono text-data text-signal underline-offset-4 hover:underline"
+    >
+      {contact.email}
+    </a>
+    <a
+      href={contactHref}
+      class="block underline underline-offset-4 transition-colors hover:text-fg"
+    >
+      {t.contactForm}
+    </a>
+  </address>
+</LegalSection>

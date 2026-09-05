@@ -319,8 +319,27 @@ export const ui = {
 } as const;
 
 
+type RouteKey = keyof (typeof routes)[typeof defaultLocale];
+
+/** slug -> route key, per locale, so a localised slug can be looked back up. */
+const routeKeyBySlug = Object.fromEntries(
+  locales.map((locale) => [
+    locale,
+    Object.fromEntries(
+      Object.entries(routes[locale]).map(([key, slug]) => [slug, key]),
+    ),
+  ]),
+) as Record<Locale, Record<string, RouteKey | undefined>>;
+
 /**
- * Swap the locale segment of a pathname, keeping the rest of the route.
+ * Swap the locale segment of a pathname AND translate the route slug, because
+ * the slugs differ per locale: the English alternate of `/de/impressum/` is
+ * `/en/imprint/`, not `/en/impressum/`. Emitting the untranslated slug points
+ * hreflang and the language switcher at a 404.
+ *
+ * A slug with no entry in `routes` is passed through unchanged, so anchors and
+ * any future nested path still resolve to something.
+ *
  * The trailing slash is preserved so alternates and canonical agree —
  * mismatched trailing slashes read as two different URLs to a crawler.
  */
@@ -328,7 +347,11 @@ export function switchLocalePath(pathname: string, to: Locale): string {
   const segments = pathname.split("/").filter(Boolean);
 
   if (isLocale(segments[0])) {
+    const from = segments[0];
     segments[0] = to;
+
+    const key = segments[1] ? routeKeyBySlug[from][segments[1]] : undefined;
+    if (key) segments[1] = routes[to][key];
   } else {
     segments.unshift(to);
   }

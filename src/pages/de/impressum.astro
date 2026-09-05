@@ -1,0 +1,27 @@
+---
+import LegalPage from "../../components/legal/LegalPage.astro";
+import LegalContactCard from "../../components/legal/LegalContactCard.astro";
+import LegalSection from "../../components/legal/LegalSection.astro";
+import { legal } from "../../i18n/legal";
+
+const lang = "de" as const;
+const t = legal[lang].imprint;
+---
+
+<LegalPage
+  lang={lang}
+  title={t.title}
+  description={t.description}
+  eyebrow={t.eyebrow}
+  heading={t.heading}
+>
+  <div class="mt-8">
+    <LegalContactCard lang={lang} />
+  </div>
+
+  {
+    t.sections.map((section, i) => (
+      <LegalSection index={i + 1} {...section} />
+    ))
+  }
+</LegalPage>
