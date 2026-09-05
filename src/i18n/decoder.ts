@@ -122,7 +122,7 @@ export const decoder = {
         },
         {
           q: "Welche Hash-Verfahren werden unterstützt?",
-          a: "MD5, SHA-1, SHA-256 und SHA-512. MD5 und SHA-1 gelten als gebrochen und sollten für Sicherheitszwecke nicht mehr verwendet werden; sie sind hier, weil sie in bestehenden Tracking-Setups und Schnittstellen weiterhin vorkommen. Für neue Implementierungen ist SHA-256 die richtige Wahl.",
+          a: "MD5, SHA-1, SHA-256 und SHA-512. MD5 und SHA-1 gelten als „geknackt“ und sollten für Sicherheitszwecke nicht mehr verwendet werden; sie sind hier, weil sie in bestehenden Tracking-Setups und Schnittstellen weiterhin vorkommen. Für neue Implementierungen ist SHA-256 die richtige Wahl.",
         },
         {
           q: "Warum schlägt Base64 bei Umlauten fehl?",
