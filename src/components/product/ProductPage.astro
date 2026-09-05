@@ -92,6 +92,25 @@ const jsonLd = {
 };
 
 const ctaRel = "noopener noreferrer";
+
+/* The feature grid paints its hairlines with `gap-px` over the container's own
+   `bg-rule`, so any cell the last row leaves unfilled shows through as a solid
+   grey block — five features in a three-column grid is exactly that case.
+   These fillers are those missing cells, painted in the card colour. The count
+   differs per breakpoint, so each one carries the classes for where it is
+   needed: below `md` the grid is a single column and never has a gap. */
+const featureFillers = (() => {
+  const n = p.features.items.length;
+  const missing = (cols: number) => (cols - (n % cols)) % cols;
+  const md = missing(2);
+  const lg = missing(3);
+
+  return Array.from({ length: Math.max(md, lg) }, (_, i) =>
+    ["hidden", i < md ? "md:block" : "", i < lg ? "lg:block" : "lg:hidden"]
+      .filter(Boolean)
+      .join(" "),
+  );
+})();
 ---
 
 <Base
@@ -203,6 +222,11 @@ const ctaRel = "noopener noreferrer";
               {feature.description}
             </p>
           </li>
+        ))
+      }
+      {
+        featureFillers.map((cls) => (
+          <li class={`bg-ground ${cls}`} aria-hidden="true" />
         ))
       }
     </ul>
