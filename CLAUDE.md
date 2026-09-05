@@ -14,7 +14,7 @@
 - **Analytics:** self-hosted Umami, **client-side only** — cookieless, no consent gate, no middleware, no per-route allowlist (see Analytics)
 - **Sitemap:** `@astrojs/sitemap`, locale-aware
 
-Two pages ship JavaScript, both vanilla and both bundled by Vite: the homepage's ~3 KB scanner module, and the de-coder's ~11 KB gzipped module (json5 + js-md5 dominate it — see **The de-coder**). Every other page is zero-JS. Every page also loads the Umami script from the site's own subdomain. **No framework runtime ships anywhere.** Keep it that way: reach for an island only if a feature genuinely cannot be done in that budget, and prefer vanilla when it can.
+Three pages ship JavaScript, all vanilla and all bundled by Vite: the homepage's ~3 KB scanner module, the cookie scanner report's ~2 KB gzipped module, and the de-coder's ~11 KB gzipped module (json5 + js-md5 dominate that one — see **The de-coder**). Every other page is zero-JS. Every page also loads the Umami script from the site's own subdomain. **No framework runtime ships anywhere.** Keep it that way: reach for an island only if a feature genuinely cannot be done in that budget, and prefer vanilla when it can.
 
 ## Commands
 
@@ -32,7 +32,7 @@ Two pages ship JavaScript, both vanilla and both bundled by Vite: the homepage's
 HOST=0.0.0.0 PORT=4321 node dist/server/entry.mjs
 ```
 
-Prerendered: both homepages, all four legal pages, all four product pages and both de-coder pages. On demand: `/` (Accept-Language redirect), `/404`, both contact pages, and `/api/scan`. The host needs Chromium and, for the contact form, the SMTP variables — both are optional to *build*, but the scanner 502s and the form reports a config error without them.
+Prerendered: both homepages, all four legal pages, all four product pages, both de-coder pages and both cookie scanner pages. On demand: `/` (Accept-Language redirect), `/404`, both contact pages, and `/api/scan`. The host needs Chromium and, for the contact form, the SMTP variables — both are optional to *build*, but the scanner 502s and the form reports a config error without them.
 
 ## Documentation files
 
@@ -57,6 +57,7 @@ src/
     legal.ts       Operator data (verbatim from v1) + imprint and privacy copy
     products.ts    Both product pages: copy, metadata and JSON-LD source
     decoder.ts     De-coder copy; the placeholder pairs double as a fixture
+    scanner.ts     Cookie scanner page copy, incl. the consent comparison
   lib/
     contact.ts       Validation, honeypot and SMTP send for the contact form
     is-public-url.ts SSRF guard — every crawl target must pass through it
@@ -68,6 +69,7 @@ src/
     Section.astro     Shared section shell: top rule, mono eyebrow, h2, lede
     ContactForm.astro Progressively-enhanced form (works with JS disabled)
     DecoderPanel.astro The de-coder tool — vanilla island, ~11 KB gzipped
+    scanner/          ScannerPanel.astro — full report UI, ~2 KB gzipped
     layout/           Nav.astro, Footer.astro
     legal/            LegalPage, LegalSection, LegalContactCard, LegalResponsible
     product/          ProductPage.astro — the whole product page, both products
@@ -76,12 +78,13 @@ src/
   pages/
     index.astro      prerender=false; Accept-Language negotiation, 302 to a locale
     404.astro        prerender=false; picks its locale from the requested path
-    api/scan.ts      prerender=false; the hero cookie scanner endpoint
+    api/scan.ts      prerender=false; cookie scanner endpoint (hero + report)
     de/index.astro   de/kontakt.astro   (kontakt is prerender=false, handles POST)
     de/impressum.astro   de/datenschutz.astro
     en/index.astro   en/contact.astro
     en/imprint.astro     en/privacy.astro
     de/de-kodierer.astro en/de-coder.astro
+    de/cookie-scanner.astro  en/cookie-crawler.astro
     de/products/  en/products/   braze-sgtm-proxy.astro, shopify-gtm-setup.astro
   assets/projects/   Project screenshots — optimised by astro:assets
   styles/global.css  Tailwind import, @theme tokens, @utility, base layer
@@ -129,9 +132,94 @@ Filenames are imported by name in `src/i18n/portfolio.ts`, so keeping the name m
 
 Grid and flex items default to `min-width: auto`, so any wide child (the scan table, the CV table) will push its track past the viewport and give the whole page a horizontal scrollbar. **Every grid track holding a wide element needs `min-w-0`**, with `overflow-x-auto` on the wide element's own wrapper — and that wrapper needs `tabindex="0"` + `role="region"` + an `aria-label` so it can be scrolled by keyboard (WCAG 2.1.1).
 
-## The hero cookie scanner
+## The cookie scanner
 
-`ScanPanel.astro` + `POST /api/scan`. The visitor enters a URL, Playwright loads it once **without touching the consent banner**, and the panel reports what was set — so everything it finds is pre-consent by definition. It deliberately does not try to click a CMP: guessing selectors gives unreliable results, and "what happens if I just visit" is the honest question anyway.
+One endpoint, `POST /api/scan`, serves two surfaces: `ScanPanel.astro` in the hero and the full report page (`ScannerPanel.astro` on `/de/cookie-scanner/` and `/en/cookie-crawler/`).
+
+The default pass loads the target once **without touching the consent banner**, so everything it finds is pre-consent by definition. That stays the headline on both surfaces — "what happens if I just visit" is the honest question.
+
+### One scan, two views
+
+A scan always produces the full result and caches it; `full: false` callers get a narrowed copy of the same cached object.
+
+- The hero sends no `full` flag and receives counts plus the first three cookies — exactly the shape it had before the page existed, so the hero was not touched beyond adding its link.
+- The report page sends `full: true` and gets cookies, storage, requests and the consent comparison.
+- **A hero scan therefore warms the cache for the report page and vice versa.** There is never a second Playwright run for a URL already scanned.
+
+The cache key is `${url}|${selector}`, not the URL alone: a scan that clicked consent is a different observation from one that did not, and collapsing them would let one poison the other.
+
+### The consent comparison is the point
+
+`selector` is optional. Given one, the scan runs a **second** phase: click the banner's accept button, settle again, snapshot again. The pre-consent phase is never skipped, so the response carries both, plus `addedCookies` — what consent actually caused.
+
+v1 clicked the banner and reported a single snapshot, so it could only ever answer "what is set after accepting". Keeping both phases is what turns that into "here is what consent changed", which is the argument the tool exists to make.
+
+The summary metrics carry **both** figures — "cookies before consent" and "cookies after consent" — so the delta is readable without scrolling to the comparison block. Two rules there:
+
+- The after-metric is **always rendered**, but its *number* appears only when `clicked` is true; otherwise it shows a faint `–`. With no selector, or one that missed, `consent.cookieCount` is just the pre-consent number again, and printing that as an "after" figure would claim a measurement nobody took. Hiding the metric entirely was the first attempt and was worse: with the field left empty the metric simply vanished, which reads as a broken tool rather than as "you did not ask for this measurement".
+- It is deliberately **uncoloured**. `crit` is reserved for the before-metric, because cookies set *before* consent are the legal problem; cookies set *after* it are the lawful case, and colouring them red would misstate the whole argument.
+
+`clicked: false` means the click did not happen. The numbers are then simply the pre-consent ones, and the UI says so rather than implying consent had no effect.
+
+### Where the selector is looked for
+
+A visitor pastes a selector out of their own DevTools, so the scan has to look everywhere DevTools would show them an element:
+
+| Where | Handled by |
+|---|---|
+| Main document | Playwright's CSS engine |
+| **iframes** | every frame is tried, not just the main one |
+| **Open shadow roots** | Playwright's CSS engine pierces these by itself — nothing was added for it |
+| **Closed shadow roots** | `FORCE_OPEN_SHADOW_ROOTS`, an init script that rewrites `attachShadow({mode:'closed'})` to `'open'` before any page script runs |
+
+The closed-root patch is registered on the **context**, so it is in place before the first document. A component therefore never observes a mode other than the one it keeps — patching after load would be too late and would leave the root closed anyway. Nobody can write a selector for a closed root by hand either (DevTools does not show inside one), so this only ever helps.
+
+**`clicked: false` is not one condition, and the `reason` field says which:**
+
+| `reason` | Meaning | What the person has to fix |
+|---|---|---|
+| `not-found` | nothing matched, in any frame or shadow root | the selector — almost always a typo |
+| `not-clickable` | matched, but covered, hidden, disabled or detached | the timing, or a different element |
+
+Collapsing these into one boolean sends people looking in the wrong place: a typo reads as "the tool cannot see into shadow DOM". Keep them distinct.
+
+The phase is deliberately bounded — 2 attempts, 3s click timeout, ~7s worst case — because a selector that never matches must not hold a Playwright slot for a minute. Across frames, one frame reporting `not-clickable` outranks every other frame's plain miss, since it is the more useful finding.
+
+### Settling: a floor, then a ceiling — never a race
+
+`settle(page, min, max)` sleeps `min` unconditionally, then waits for `networkidle` up to `max` total.
+
+**It must not be a `Promise.race` between `networkidle` and a timeout, which is what it was.** `networkidle` resolves after just 500ms of quiet, and the moment right after a consent click is exactly such a lull — the banner has closed and the tag manager has not made its first request yet. So the race returned almost immediately and the scan concluded that consent set nothing.
+
+Measured on vkb.de, which runs Usercentrics, Adobe and Google Ads:
+
+| | whole scan | cookies added by consent |
+|---|---|---|
+| race (broken) | 1.4s | **0** |
+| floor (correct) | 4.6s | **21** |
+
+Twenty-one cookies — `demdex`, `s_vi`, `s_fid`, `kndctr_*`, `_ga`, `FPID`, `FPAU`, `_fbp`, doubleclick's `test_cookie` — reported as none. The pre-consent pass was understated the same way: 47 requests became 104 once late tags had time to fire. A tool whose entire claim is "here is what consent changed" cannot afford to sample before the change happens. **If these numbers ever look suspiciously clean, check the settle first.**
+
+Floors are `LOAD_SETTLE_MIN_MS` 1.5s and `CONSENT_SETTLE_MIN_MS` 2.5s; the post-consent floor is longer because that phase exists to catch a chain that has not started.
+
+### Looking like a real visitor
+
+A tag suppressed because the client looked like a bot makes the report **understate** tracking — the one error this tool cannot afford. So the browser presents itself as an ordinary German desktop visitor:
+
+- **User agent from the actual browser build** (`browser.version()`), never a pinned string. A hard-coded "Chrome/122" beside a Chrome 151 binary is itself a mismatch, because client hints keep reporting the real version.
+- **Client hints set alongside it.** `sec-ch-ua` is *not* derived from Playwright's `userAgent` option, so without `extraHTTPHeaders` the page is told `HeadlessChrome` regardless of the UA — and a UA that contradicts its own client hints is a stronger bot signal than either alone.
+- **`MASK_AUTOMATION`**, an init script, does the JS-visible half: `navigator.userAgentData.brands` (otherwise `HeadlessChrome`), `platform` (the UA claims Windows; a Linux host would disagree) and `languages`.
+- **`locale: "de-DE"`, `timezoneId: "Europe/Berlin"`, weighted `Accept-Language`.** A German visitor is the right frame of reference for German privacy law, and some CMPs choose their banner from exactly these values.
+
+Verified: no `Headless` string reaches the site in any header, and `navigator.webdriver` is false.
+
+**Nothing is ever blocked.** There is no `route()` interception, no `abort()`, no blocked-URL list anywhere in the scan path, and there must not be — a blocked third-party script is a tracker the report would fail to see. Do not add request filtering "for speed".
+
+### Payload caps
+
+Requests are capped at 250, storage at 150, and any single value at 200 characters. **Counts always describe reality**; only the lists are cut, and `truncated` says which. A page that fires 3,000 requests must not produce a 3 MB JSON response.
+
+### Guards
 
 This is the most reachable endpoint on the site, so it is guarded on four axes, all in `src/lib/guards.ts` and `is-public-url.ts`:
 
@@ -140,7 +228,7 @@ This is the most reachable endpoint on the site, so it is guarded on four axes, 
 | SSRF (`isPublicUrl`) | rejects non-http(s), loopback, RFC1918, link-local, unique-local | 400 `private` |
 | Concurrency | max 2 Playwright jobs | 503 `busy` |
 | Rate limit | 5 scans / 10 min / IP | 429 `limit` |
-| Cache | 5 min TTL per URL, checked *before* the rate limit | — |
+| Cache | 5 min TTL per url **and** selector, checked *before* the rate limit | — |
 
 **Do not remove or loosen any of these.** Rate limiting keys off Astro's `clientAddress` (the real socket address), never a forgeable proxy header and never a shared fallback constant — a shared key turns the per-IP limit into a site-wide one.
 
@@ -336,21 +424,9 @@ Ordered by dependency and by damage-if-missing, not by fun. Each step is indepen
 - Legal pages — Impressum, Datenschutz, Imprint, Privacy (see **Legal pages** below)
 - Product pages — Braze sGTM proxy and Shopify GTM setup, both locales (see **Product pages** below)
 - De-coder tool — vanilla island, both locales (see **The de-coder** below)
+- Cookie scanner page — full report with before/after consent (see **The cookie scanner** below)
 
-### Step 4 — Cookie scanner page + full report ⟵ do this first
-
-**Why now:** the API already exists; this unlocks the "full report" link the hero deliberately does not yet have.
-
-- Extend `POST /api/scan` to return the full result, not just the first three cookies — v1's `app/api/crawl/route.ts` also collects observed requests and local/session storage; add those back.
-- Keep the hero's truncated view; the page shows everything.
-- The v1 crawler accepts an optional `cssSelector` to click a consent banner and re-scan. That is what makes a *before/after consent* comparison possible — the strongest version of this tool. Port it.
-- Add the "full report" link to `ScanPanel.astro` **only once this page exists**.
-- Flip `ready: true` for `cookieScanner` in `nav.groups` (both locales) so it appears in the Tools menu.
-- Routes: `de/cookie-scanner.astro`, `en/cookie-crawler.astro`.
-
-**Done when:** the page renders a full scan, the hero links to it, and the SSRF/concurrency/rate-limit guards still hold on the extended endpoint.
-
-### Step 5 — Data layer checker
+### Step 5 — Data layer checker ⟵ do this first
 
 **Why now:** the heaviest tool, and the only one still needing a new API route.
 
@@ -383,7 +459,7 @@ Every v1 URL must resolve in v2 or 301 somewhere sensible. v1's inventory (from 
 | `/de/products/braze-sgtm-proxy`, `/en/products/braze-sgtm-proxy` | done |
 | `/de/products/shopify-gtm-setup`, `/en/products/shopify-gtm-setup` | done |
 | `/de/de-kodierer`, `/en/de-coder` | done |
-| `/de/cookie-scanner`, `/en/cookie-crawler` | step 4 |
+| `/de/cookie-scanner`, `/en/cookie-crawler` | done |
 | `/de/data-layer-checker`, `/en/data-layer-crawler` | step 5 |
 
 Note the **trailing slash**: v2 emits `/de/` where v1 used `/de`. Confirm the host redirects one to the other consistently rather than serving both.

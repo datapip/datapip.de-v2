@@ -1,0 +1,483 @@
+---
+/**
+ * The full cookie scanner: form, summary, consent comparison and the three
+ * result tables.
+ *
+ * A vanilla island like `ScanPanel.astro`, for the same reason — this is a
+ * form, a fetch and some tables. v1 used React with a Shadcn accordion; the
+ * tables here open with native <details>, so the only script is the one that
+ * submits and renders.
+ *
+ * The tables are the widest content on the site, so each one is wrapped in a
+ * keyboard-scrollable region per the layout rule in CLAUDE.md.
+ */
+import { scanner } from "../../i18n/scanner";
+import type { Locale } from "../../i18n/ui";
+
+interface Props {
+  lang: Locale;
+}
+
+const { lang } = Astro.props;
+const t = scanner[lang];
+
+/* Everything the client script needs to render, handed over as data so both
+   locales share one bundle. */
+const strings = {
+  running: t.form.running,
+  submit: t.form.submit,
+  result: t.result,
+  consent: t.consent,
+  errors: t.errors,
+};
+
+const fieldClass =
+  "mt-3 block w-full min-w-0 border border-rule bg-ground px-3 py-2.5 font-mono text-data text-fg placeholder:text-fg-faint focus-visible:border-signal";
+---
+
+<section class="border border-rule bg-raised" data-scanner-page>
+  <header class="flex items-center gap-3 border-b border-rule px-4 py-3 md:px-5">
+    <span class="label text-fg-muted">{t.form.panelTitle}</span>
+    <span class="ml-auto flex items-center gap-2">
+      <span
+        class="block size-1.5 rounded-full bg-fg-faint"
+        aria-hidden="true"
+        data-dot></span>
+      <span class="label text-fg-faint" data-status></span>
+    </span>
+  </header>
+
+  <form class="space-y-8 p-4 md:p-5" data-form>
+    <div class="min-w-0">
+      <label class="label block text-fg" for="scan-url">{t.form.urlLabel}</label>
+      <p class="mt-2 text-[0.85rem] text-fg-muted">{t.form.urlDescription}</p>
+      <input
+        id="scan-url"
+        name="url"
+        type="text"
+        inputmode="url"
+        autocomplete="url"
+        spellcheck="false"
+        required
+        placeholder={t.form.urlPlaceholder}
+        class={fieldClass}
+        data-url
+      />
+    </div>
+
+    <div class="min-w-0">
+      <label class="label block text-fg" for="scan-selector">
+        {t.form.selectorLabel}{" "}
+        <span class="text-fg-faint">({t.form.selectorOptional})</span>
+      </label>
+      <p class="mt-2 text-[0.85rem] text-fg-muted">
+        {t.form.selectorDescription}
+      </p>
+
+      {/* Native disclosure — the how-to is long and rarely needed. */}
+      <details class="mt-3 border border-rule">
+        <summary
+          class="label cursor-pointer list-none px-3 py-2 text-fg-muted transition-colors hover:text-fg marker:hidden [&::-webkit-details-marker]:hidden"
+        >
+          {t.form.selectorHintTitle}
+        </summary>
+        <ol
+          class="list-decimal space-y-1 border-t border-rule px-3 py-3 pl-8 text-[0.85rem] text-fg-muted"
+        >
+          {t.form.selectorHintSteps.map((step) => <li>{step}</li>)}
+        </ol>
+      </details>
+
+      <input
+        id="scan-selector"
+        name="selector"
+        type="text"
+        spellcheck="false"
+        placeholder={t.form.selectorPlaceholder}
+        class={fieldClass}
+        data-selector
+      />
+    </div>
+
+    <div class="flex flex-wrap items-center gap-4">
+      <button
+        type="submit"
+        class="label bg-signal px-6 py-3 font-medium text-signal-ink transition-opacity hover:opacity-90 disabled:opacity-40"
+        data-umami-event="tool_use"
+        data-umami-event-type="crawler"
+        data-submit
+      >
+        {t.form.submit}
+      </button>
+      <p class="text-[0.8rem] text-fg-faint" hidden data-running-hint>
+        {t.form.runningHint}
+      </p>
+    </div>
+  </form>
+
+  <div hidden class="border-t border-rule px-4 py-3 md:px-5" aria-live="polite" data-error>
+    <p class="label text-crit" data-error-title></p>
+    <p class="mt-1 text-[0.85rem] text-fg-muted" data-error-message></p>
+  </div>
+
+  <div hidden data-output aria-live="polite"></div>
+
+  <p class="border-t border-rule px-4 py-3 text-[0.78rem] text-fg-faint md:px-5">
+    {t.note}
+  </p>
+
+  <noscript>
+    <p class="border-t border-rule px-4 py-3 text-[0.8rem] text-warn md:px-5">
+      {t.noscript}
+    </p>
+  </noscript>
+</section>
+
+{/* A data blob, not a module — inline is correct here. */}
+<script is:inline type="application/json" data-scanner-strings set:html={JSON.stringify(strings)} />
+
+<script>
+  interface ScanCookie {
+    name: string;
+    value: string;
+    domain: string;
+    path: string;
+    expiry: string;
+    httpOnly: boolean;
+    thirdParty: boolean;
+  }
+
+  interface ScanStorageItem {
+    name: string;
+    value: string;
+    storage: "local" | "session";
+    frameUrl: string;
+  }
+
+  interface ScanRequest {
+    url: string;
+    host: string;
+    thirdParty: boolean;
+  }
+
+  interface ConsentPhase {
+    clicked: boolean;
+    reason: "clicked" | "not-found" | "not-clickable";
+    cookieCount: number;
+    thirdPartyCount: number;
+    storageCount: number;
+    requestCount: number;
+    addedCookies: ScanCookie[];
+  }
+
+  interface ScanResult {
+    url: string;
+    durationMs: number;
+    cookieCount: number;
+    thirdPartyCount: number;
+    storageCount: number;
+    requestCount: number;
+    thirdPartyHostCount: number;
+    cookies: ScanCookie[];
+    storage: ScanStorageItem[];
+    requests: ScanRequest[];
+    truncated: { requests: boolean; storage: boolean };
+    consent?: ConsentPhase;
+  }
+
+  const root = document.querySelector<HTMLElement>("[data-scanner-page]");
+  if (root) {
+    const form = root.querySelector<HTMLFormElement>("[data-form]")!;
+    const urlEl = root.querySelector<HTMLInputElement>("[data-url]")!;
+    const selectorEl = root.querySelector<HTMLInputElement>("[data-selector]")!;
+    const submitEl = root.querySelector<HTMLButtonElement>("[data-submit]")!;
+    const runningHint = root.querySelector<HTMLElement>("[data-running-hint]")!;
+    const statusEl = root.querySelector<HTMLElement>("[data-status]")!;
+    const dotEl = root.querySelector<HTMLElement>("[data-dot]")!;
+    const outputEl = root.querySelector<HTMLElement>("[data-output]")!;
+    const errorEl = root.querySelector<HTMLElement>("[data-error]")!;
+    const errorTitle = root.querySelector<HTMLElement>("[data-error-title]")!;
+    const errorMessage = root.querySelector<HTMLElement>("[data-error-message]")!;
+
+    const s = JSON.parse(
+      document.querySelector("[data-scanner-strings]")?.textContent ?? "{}",
+    );
+
+    const esc = (value: string) =>
+      String(value).replace(
+        /[&<>"']/g,
+        (c) =>
+          ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!,
+      );
+
+    function setState(state: "ready" | "busy" | "done" | "error") {
+      dotEl.className = `block size-1.5 rounded-full ${
+        {
+          ready: "bg-fg-faint",
+          busy: "bg-warn motion-safe:animate-pulse",
+          done: "bg-signal",
+          error: "bg-crit",
+        }[state]
+      }`;
+      statusEl.textContent = state === "busy" ? s.running : "";
+    }
+
+    /** Wide tables must be reachable by keyboard, not just by trackpad. */
+    function scrollRegion(inner: string) {
+      return `<div class="overflow-x-auto" tabindex="0" role="region" aria-label="${esc(
+        s.result.scrollHint,
+      )}">${inner}</div>`;
+    }
+
+    function table(headers: string[], rows: string[][]) {
+      if (rows.length === 0) {
+        return `<p class="px-4 py-4 text-[0.85rem] text-fg-muted md:px-5">${esc(
+          s.result.empty,
+        )}</p>`;
+      }
+
+      const head = headers
+        .map((h) => `<th class="label whitespace-nowrap px-3 py-2 text-left font-normal text-fg-faint">${esc(h)}</th>`)
+        .join("");
+
+      const body = rows
+        .map(
+          (cells) =>
+            `<tr class="border-t border-rule align-top">${cells
+              .map(
+                (cell) =>
+                  `<td class="px-3 py-2 font-mono text-[0.75rem] text-fg-muted">${cell}</td>`,
+              )
+              .join("")}</tr>`,
+        )
+        .join("");
+
+      return scrollRegion(
+        `<table class="w-full border-collapse text-left"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`,
+      );
+    }
+
+    function section(title: string, count: number, inner: string, open = false) {
+      return `<details class="border-t border-rule"${open ? " open" : ""}>
+        <summary class="label flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-fg-muted transition-colors hover:text-fg marker:hidden [&::-webkit-details-marker]:hidden md:px-5">
+          <span>${esc(title)}</span>
+          <span class="tabular-nums text-fg-faint">(${count})</span>
+        </summary>
+        ${inner}
+      </details>`;
+    }
+
+    function metric(value: number | string, label: string, tone = "text-fg") {
+      return `<div class="min-w-0 border-l border-rule pl-4 first:border-l-0 first:pl-0">
+        <p class="font-mono text-[2rem] font-medium leading-none tabular-nums ${tone}">${value}</p>
+        <p class="label mt-2 text-fg-faint">${esc(label)}</p>
+      </div>`;
+    }
+
+    /**
+     * Cookie values and request URLs are routinely hundreds of characters.
+     * Unconstrained they push the table metres wide, so the cell gets a hard
+     * ceiling and breaks anywhere — the scroll region then only has to cover
+     * the sum of the columns, not one runaway string.
+     */
+    function wide(value: string) {
+      // Class written out in full: Tailwind scans source text, so an
+      // interpolated class name would never be generated.
+      return `<span class="block max-w-[24rem] break-all">${esc(value)}</span>`;
+    }
+
+    function party(isThird: boolean) {
+      return isThird
+        ? `<span class="text-warn">${esc(s.result.party.third)}</span>`
+        : esc(s.result.party.first);
+    }
+
+    function cookieRows(cookies: ScanCookie[]) {
+      return cookies.map((c) => [
+        `<span class="text-fg">${esc(c.name)}</span>`,
+        wide(c.value),
+        esc(c.domain),
+        esc(c.expiry),
+        esc(c.httpOnly ? s.result.source.http : s.result.source.js),
+        party(c.thirdParty),
+      ]);
+    }
+
+    function render(data: ScanResult) {
+      const cols = s.result.columns;
+      const clean = data.cookieCount === 0;
+
+      const summary = `
+        <div class="border-t border-rule px-4 py-6 md:px-5">
+          <p class="text-[0.85rem] text-fg-muted">
+            ${esc(s.result.on)}
+            <a href="${esc(data.url)}" target="_blank" rel="noopener noreferrer nofollow"
+               class="font-mono text-data text-signal underline-offset-4 hover:underline">${esc(data.url)}</a>
+            — ${esc(s.result.scannedIn)} <span class="tabular-nums">${(data.durationMs / 1000).toFixed(1)}s</span>
+          </p>
+
+          <div class="mt-6 flex flex-wrap gap-x-8 gap-y-6">
+            ${metric(data.cookieCount, s.result.metrics.cookies, clean ? "text-signal" : "text-crit")}
+            ${
+              /* Always rendered, so the pair reads as a before/after and the
+                 tool tells you the after-figure exists. But the number is
+                 shown ONLY when a click actually happened: with no selector,
+                 or one that missed, consent.cookieCount is just the
+                 pre-consent number again, and printing that as an "after"
+                 would claim a measurement nobody took. Hence the dash.
+                 Deliberately uncoloured — cookies set AFTER consent are the
+                 lawful case, so crit here would misread the whole point. */
+              data.consent?.clicked
+                ? metric(data.consent.cookieCount, s.result.metrics.cookiesAfter)
+                : metric(s.result.notMeasured, s.result.metrics.cookiesAfter, "text-fg-faint")
+            }
+            ${metric(data.thirdPartyCount, s.result.metrics.thirdPartyCookies)}
+            ${metric(data.storageCount, s.result.metrics.storage)}
+            ${metric(data.requestCount, s.result.metrics.requests)}
+            ${metric(data.thirdPartyHostCount, s.result.metrics.thirdPartyHosts)}
+          </div>
+
+          ${
+            clean
+              ? `<div class="mt-6 border border-signal/40 px-4 py-3">
+                   <p class="label text-signal">${esc(s.result.clean.heading)}</p>
+                   <p class="mt-1 text-[0.85rem] text-fg-muted">${esc(s.result.clean.body)}</p>
+                 </div>`
+              : ""
+          }
+        </div>`;
+
+      const consent = data.consent
+        ? `<div class="border-t border-rule px-4 py-6 md:px-5">
+             <p class="label text-signal">${esc(s.consent.heading)}</p>
+             <p class="mt-2 text-[0.85rem] text-fg-muted">${esc(
+               data.consent.clicked
+                 ? s.consent.body
+                 : data.consent.reason === "not-clickable"
+                   ? s.consent.notClickable
+                   : s.consent.notClicked,
+             )}</p>
+             ${
+               data.consent.clicked
+                 ? `<div class="mt-5 flex flex-wrap gap-x-8 gap-y-4 font-mono text-data">
+                      <span class="text-fg-muted">${esc(s.consent.before)}:
+                        <span class="tabular-nums text-fg">${data.cookieCount}</span></span>
+                      <span class="text-fg-muted">${esc(s.consent.after)}:
+                        <span class="tabular-nums text-fg">${data.consent.cookieCount}</span></span>
+                    </div>
+                    ${
+                      data.consent.addedCookies.length === 0
+                        ? `<p class="mt-4 text-[0.85rem] text-fg-muted">${esc(s.consent.noChange)}</p>`
+                        : `<p class="label mt-6 text-fg-faint">${esc(s.consent.added)} (${data.consent.addedCookies.length})</p>
+                           <div class="mt-3 border border-rule">${table(
+                             [cols.name, cols.value, cols.domain, cols.expiry, cols.type, ""],
+                             cookieRows(data.consent.addedCookies),
+                           )}</div>`
+                    }`
+                 : ""
+             }
+           </div>`
+        : "";
+
+      const truncatedNote = (shown: boolean) =>
+        shown
+          ? `<p class="px-4 pb-3 text-[0.78rem] text-fg-faint md:px-5">${esc(
+              s.result.truncated,
+            )}</p>`
+          : "";
+
+      const cookieTable = section(
+        s.result.tables.cookies,
+        data.cookieCount,
+        table(
+          [cols.name, cols.value, cols.domain, cols.expiry, cols.type, ""],
+          cookieRows(data.cookies),
+        ),
+        !clean,
+      );
+
+      const storageTable = section(
+        s.result.tables.storage,
+        data.storageCount,
+        table(
+          [cols.name, cols.value, cols.storage, cols.frame],
+          data.storage.map((item) => [
+            `<span class="text-fg">${esc(item.name)}</span>`,
+            wide(item.value),
+            esc(item.storage),
+            wide(item.frameUrl),
+          ]),
+        ) + truncatedNote(data.truncated.storage),
+      );
+
+      const requestTable = section(
+        s.result.tables.requests,
+        data.requestCount,
+        table(
+          [cols.url, cols.host, ""],
+          data.requests.map((r) => [
+            wide(r.url),
+            esc(r.host),
+            party(r.thirdParty),
+          ]),
+        ) + truncatedNote(data.truncated.requests),
+      );
+
+      outputEl.innerHTML = summary + consent + cookieTable + storageTable + requestTable;
+      outputEl.hidden = false;
+    }
+
+    function showError(code: string) {
+      errorTitle.textContent = s.errors.title;
+      errorMessage.textContent = s.errors[code] ?? s.errors.unknown;
+      errorEl.hidden = false;
+      setState("error");
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (!urlEl.value.trim()) return;
+
+      errorEl.hidden = true;
+      outputEl.hidden = true;
+      outputEl.innerHTML = "";
+      submitEl.disabled = true;
+      runningHint.hidden = false;
+      setState("busy");
+
+      try {
+        const response = await fetch("/api/scan", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            url: urlEl.value.trim(),
+            selector: selectorEl.value.trim() || undefined,
+            full: true,
+          }),
+        });
+
+        const payload = await response.json();
+
+        if (!response.ok) {
+          showError(typeof payload?.error === "string" ? payload.error : "unknown");
+          return;
+        }
+
+        render(payload as ScanResult);
+        setState("done");
+      } catch {
+        showError("failed");
+      } finally {
+        submitEl.disabled = false;
+        runningHint.hidden = true;
+      }
+    });
+
+    // The hero links here with ?url=… after its own scan. Pre-fill only —
+    // auto-running would let any link spend a visitor's rate limit.
+    const handoff = new URLSearchParams(location.search).get("url");
+    if (handoff) urlEl.value = handoff;
+
+    setState("ready");
+  }
+</script>

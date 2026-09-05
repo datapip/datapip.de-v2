@@ -9,9 +9,9 @@ export function isLocale(value: unknown): value is Locale {
 /**
  * Localised path segments. Keys stay stable across locales; values do not.
  *
- * `cookieScanner`, `dataLayerChecker` and `decoder` are reserved slugs — the
- * pages do not exist yet, so nothing links to them. They are kept here so the
- * v1 URLs are not accidentally reassigned when those pages are built.
+ * `dataLayerChecker` is a reserved slug — that page does not exist yet
+ * (roadmap step 5). It is kept here so the v1 URL is not accidentally
+ * reassigned before it is built.
  */
 export const routes = {
   de: {
@@ -88,7 +88,7 @@ export const ui = {
           label: "Tools",
           items: [
             { route: "decoder", label: "De-Kodierer", ready: true },
-            { route: "cookieScanner", label: "Cookie-Scanner", ready: false },
+            { route: "cookieScanner", label: "Cookie-Scanner", ready: true },
             {
               route: "dataLayerChecker",
               label: "Data-Layer-Checker",
@@ -131,6 +131,7 @@ export const ui = {
       more: "weitere",
       cleanHeading: "Keine Cookies vor Consent",
       cleanBody: "Sauber – vor der Consent-Entscheidung wird nichts gesetzt.",
+      fullReport: "Vollständiger Bericht",
       note: "Es wird nur die angegebene Seite geladen, ohne Klick auf das Consent-Banner.",
       noscript:
         "Für die Live-Prüfung wird JavaScript benötigt. Alternativ gerne per E-Mail melden.",
@@ -246,7 +247,7 @@ export const ui = {
           label: "Tools",
           items: [
             { route: "decoder", label: "De-coder", ready: true },
-            { route: "cookieScanner", label: "Cookie Crawler", ready: false },
+            { route: "cookieScanner", label: "Cookie Crawler", ready: true },
             {
               route: "dataLayerChecker",
               label: "Data Layer Crawler",
@@ -289,6 +290,7 @@ export const ui = {
       more: "more",
       cleanHeading: "No cookies before consent",
       cleanBody: "Clean – nothing is set before the consent decision.",
+      fullReport: "Full report",
       note: "Only the given page is loaded, with no click on the consent banner.",
       noscript:
         "The live scan needs JavaScript. Happy to run one for you by email instead.",

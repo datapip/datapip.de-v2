@@ -1,5 +1,5 @@
 ---
-import { ui, type Locale } from "../../i18n/ui";
+import { ui, routes, type Locale } from "../../i18n/ui";
 
 interface Props {
   lang: Locale;
@@ -7,6 +7,11 @@ interface Props {
 
 const { lang } = Astro.props;
 const t = ui[lang].scan;
+
+/* The full report page carries the scanned URL over as a query parameter and
+   pre-fills its form. It deliberately does NOT auto-run: a link that starts a
+   Playwright job would let anyone spend a visitor's rate limit for them. */
+const reportPath = `/${lang}/${routes[lang].cookieScanner}/`;
 
 // Handed to the client script as data rather than baked into it, so all
 // copy stays in src/i18n and both locales share one bundle.
@@ -20,6 +25,8 @@ const strings = {
   more: t.more,
   cleanHeading: t.cleanHeading,
   cleanBody: t.cleanBody,
+  fullReport: t.fullReport,
+  reportPath,
   errors: t.errors,
 };
 ---
@@ -161,12 +168,19 @@ const strings = {
         .toFixed(1)
         .replace(".", ",")} s`;
 
+      const reportLink = `
+        <a href="${escape(strings.reportPath)}?url=${encodeURIComponent(data.url)}"
+           class="label flex items-center gap-2 border-t border-rule px-4 py-3 text-signal transition-colors hover:text-fg md:px-5">
+          ${escape(strings.fullReport)} <span aria-hidden="true">&rarr;</span>
+        </a>`;
+
       if (data.cookieCount === 0) {
         output.innerHTML = `
           <div class="px-4 py-6 md:px-5">
             <p class="font-mono text-[1.15rem] text-signal">${escape(strings.cleanHeading)}</p>
             <p class="mt-2 text-[0.82rem] text-fg-muted">${escape(strings.cleanBody)}</p>
-          </div>`;
+          </div>
+          ${reportLink}`;
         return;
       }
 
@@ -200,7 +214,8 @@ const strings = {
             ${data.thirdPartyCount} ${escape(strings.thirdParty)} · ${data.storageCount} ${escape(strings.storage)}
           </p>
         </div>
-        <ul class="font-mono text-data">${rows}${moreRow}</ul>`;
+        <ul class="font-mono text-data">${rows}${moreRow}</ul>
+        ${reportLink}`;
     }
 
     form.addEventListener("submit", async (event) => {
