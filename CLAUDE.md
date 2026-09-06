@@ -7,7 +7,7 @@
 - **Framework:** Astro 7 (`output: 'static'` with `@astrojs/node` in `standalone` mode, so individual routes opt out via `export const prerender = false`)
 - **Language:** TypeScript (strict, via `astro/tsconfigs/strict`)
 - **Styling:** Tailwind CSS 4 through `@tailwindcss/vite` — there is no `tailwind.config`; tokens live in `@theme` inside `src/styles/global.css`
-- **Fonts:** Astro's built-in `fonts` pipeline with the **fontsource** provider (IBM Plex Sans + JetBrains Mono), subset to `latin` + `latin-ext`. `<Font />` in `Base.astro` emits the `@font-face` CSS and the `rel="preload"` links. **Never** switch to a font CDN — a privacy-positioned site must make no third-party request.
+- **Fonts:** Astro's built-in `fonts` pipeline with the **fontsource** provider (IBM Plex Sans + JetBrains Mono), subset to `latin` only — no copy in this repo carries a latin-ext codepoint, and `<Font />` preloads every face it emits, so that subset was 61 KB of eagerly-fetched glyphs no page renders. `<Font />` in `Base.astro` emits the `@font-face` CSS and the `rel="preload"` links. **Never** switch to a font CDN — a privacy-positioned site must make no third-party request.
 - **Images:** `astro:assets`. Source files live in `src/assets/`, **not** `public/`, so they get AVIF + responsive `srcset`.
 - **Mail:** Nodemailer, imported lazily inside `src/lib/mailer.ts` — one transport definition, shared by the contact form and `/api/feedback`
 - **Browser automation:** Playwright (Chromium) for the hero cookie scanner
@@ -33,6 +33,21 @@ HOST=0.0.0.0 PORT=4321 node dist/server/entry.mjs
 ```
 
 Prerendered: both homepages, all four legal pages, all four product pages, both de-coder pages and both cookie scanner pages. On demand: `/` (Accept-Language redirect), `/404`, both contact pages, `/api/scan` and `/api/feedback`. The host needs Chromium and, for the contact form, the SMTP variables — both are optional to *build*, but the scanner 502s and the form reports a config error without them. The `PB_*` trio is optional at run time too, and its absence is **silent**: `/api/feedback` still returns 201 and still emails, it just stops writing to PocketBase.
+
+### Behind Cloudflare and Coolify
+
+The chain is **Cloudflare → Coolify (Traefik/Caddy) → this process**. TLS is terminated upstream, so Node sees plain HTTP arriving from a proxy address, and two things break in production that **cannot break locally** — both measured against the built server, neither visible in `npm run dev`:
+
+| What breaks | Why |
+|---|---|
+| **Every contact form POST 403s** | Astro's CSRF guard compares the browser's `Origin: https://datapip.de` against its own view of the URL. That view is built from the socket, so it is `http://` — the origins differ, the POST is form-encoded, and the guard refuses it. |
+| **The rate limit becomes site-wide** | `clientAddress` falls back to the socket address, which is the proxy's. Five scans per ten minutes for the entire internet, and five feedback messages total. |
+
+Both are fixed by `security.allowedDomains` in `astro.config.mjs`. **Astro ignores `x-forwarded-proto` and `x-forwarded-host` entirely while that list is empty** — naming the host is what makes it trust them, and it is empty by default. Verified after the change: the proxied form POST reaches the handler, and a genuine cross-site POST is still refused with a 403.
+
+**The rate limit keys off `cf-connecting-ip`, not `x-forwarded-for`.** Cloudflare *appends* the real address to whatever the client sent, so the first entry in that list — the one Astro reads — is chosen by the caller. `cf-connecting-ip` comes from the connection Cloudflare actually terminated and a client-supplied copy is discarded, so it is the only value here that is both per-visitor and unforgeable. Verified: seven `cf-connecting-ip` values get seven buckets, one value is limited on its sixth scan, and a forged `x-forwarded-for` alongside it changes nothing.
+
+**That trust assumes the origin is not reachable directly.** Keep Coolify closed to everything except Cloudflare — a tunnel, or the published IP ranges. If the origin is ever exposed, `cf-connecting-ip` becomes a header anyone can set.
 
 ## Documentation files
 
@@ -246,7 +261,7 @@ This is the most reachable endpoint on the site, so it is guarded on four axes, 
 | Rate limit | 5 scans / 10 min / IP | 429 `limit` |
 | Cache | 5 min TTL per url **and** selector, checked *before* the rate limit | — |
 
-**Do not remove or loosen any of these.** Rate limiting keys off Astro's `clientAddress` (the real socket address), never a forgeable proxy header and never a shared fallback constant — a shared key turns the per-IP limit into a site-wide one.
+**Do not remove or loosen any of these.** Rate limiting keys off `cf-connecting-ip`, never a shared fallback constant — a shared key turns the per-IP limit into a site-wide one. Why that header and not `clientAddress`: see **Behind Cloudflare and Coolify**.
 
 All guard state is per-process. If this is ever scaled past one Node process, the cache, slots and limits become per-instance — revisit before adding a replica.
 
@@ -582,10 +597,11 @@ Note the **trailing slash**: v2 emits `/de/` where v1 used `/de`. Confirm the ho
 6. Both locales spot-checked at 390 px and 1440 px; no horizontal scroll.
 7. OG image renders correctly in a link-preview debugger.
 8. `PB_ENDPOINT` / `PB_USER` / `PB_PASSWORD` set on the host — a miss here is **silent**, so send a test message and confirm the row lands.
-9. `simple-in-page-analytics-viewer` tested against a built v2 server; watch for the `text/plain` 403.
+9. `simple-in-page-analytics-viewer` released with its `Content-Type` header. **The 403 is confirmed, not suspected** — measured against the built server: a cross-origin `text/plain` POST to `/api/feedback` is refused before any handler runs, while `application/json` reaches it. That extension breaks the day v2 goes live.
 10. Hetzner and Cloudflare privacy clauses confirmed against the actual infrastructure — carried over from v1 and never verified.
 11. Node running as a dedicated unprivileged user, `.env` at `0600`. The browser hardening narrows the blast radius; it does not replace this.
-12. Resubmit the sitemap in Search Console and watch for 404 spikes for two weeks.
+12. Coolify reachable only through Cloudflare — see **Behind Cloudflare and Coolify** for why the rate limit depends on it.
+13. Resubmit the sitemap in Search Console and watch for 404 spikes for two weeks.
 
 ## Verification
 

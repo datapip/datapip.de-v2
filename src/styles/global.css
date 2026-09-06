@@ -2,8 +2,8 @@
 
 /* Fonts are declared in astro.config.mjs and injected by <Font /> in
    Base.astro, which also emits the preload links. Self-hosted and subset
-   to latin + latin-ext: a privacy-focused site calling a font CDN would
-   undercut its own pitch. */
+   to latin: a privacy-focused site calling a font CDN would undercut its
+   own pitch. */
 
 /* ============================================================
    INSTRUMENT - design tokens

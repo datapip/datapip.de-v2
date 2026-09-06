@@ -93,6 +93,24 @@ export default defineConfig({
     '/en/data-layer-crawler/': { status: 301, destination: '/en/cookie-crawler/' },
   },
 
+  // Deployment is Cloudflare -> Coolify (Traefik/Caddy) -> this process, so
+  // TLS is terminated upstream and Node only ever sees plain HTTP from a
+  // proxy address. Without this block Astro trusts neither forwarded header,
+  // and two things break in production that cannot break locally:
+  //
+  //  1. The CSRF guard compares the browser's `Origin: https://datapip.de`
+  //     against its own idea of the URL, which is http:// — so EVERY contact
+  //     form POST is a 403. Measured against the built server.
+  //  2. `clientAddress` falls back to the socket address, which is the
+  //     proxy's, so every visitor shares ONE rate-limit bucket: five scans
+  //     per ten minutes for the whole internet.
+  //
+  // Naming the hosts here is what lets Astro trust x-forwarded-proto and
+  // x-forwarded-host at all; it ignores both while this list is empty.
+  security: {
+    allowedDomains: [{ hostname: 'datapip.de' }, { hostname: 'www.datapip.de' }],
+  },
+
   // Default `output: 'static'`. The adapter exists so the language redirect,
   // the contact form and the 404 can opt out with `prerender = false`.
   adapter: node({ mode: 'standalone' }),

@@ -100,12 +100,34 @@ export const withinRateLimit = createRateLimit(RATE_LIMIT_WINDOW_MS, RATE_LIMIT_
 export const withinFeedbackRateLimit = createRateLimit(RATE_LIMIT_WINDOW_MS, RATE_LIMIT_MAX);
 
 /**
- * `clientAddress` is the socket address the node adapter actually saw. Prefer
- * it over proxy headers, which a caller can forge — and never fall back to a
- * shared constant, or every visitor lands in one rate-limit bucket and the
- * limit becomes site-wide.
+ * The visitor's address, for keying the rate limits.
+ *
+ * Deployment is Cloudflare -> Coolify (Traefik/Caddy) -> this process, and
+ * every hop changes what "the caller" looks like:
+ *
+ * - `clientAddress` is the SOCKET address unless astro.config's
+ *   `security.allowedDomains` is set, and the socket belongs to the proxy.
+ *   Used alone behind this stack it puts every visitor on earth into one
+ *   bucket — five scans per ten minutes for the whole internet. Measured.
+ * - `x-forwarded-for` is not the fix either. Cloudflare APPENDS the real
+ *   address to whatever the client sent, so the first entry — the one Astro
+ *   reads — is chosen by the caller.
+ * - `cf-connecting-ip` is set by Cloudflare from the connection it actually
+ *   terminated, and a client-supplied copy is discarded. So it is both
+ *   per-visitor and not forgeable, which the other two cannot both be.
+ *
+ * That guarantee is Cloudflare's, and it only holds for traffic that came
+ * through Cloudflare: it assumes the origin is not reachable directly. Keep
+ * Coolify closed to everything but Cloudflare (a tunnel, or the published
+ * IP ranges) — the header is trusted here on that basis.
+ *
+ * Never fall back to a shared constant: one key turns a per-IP limit into a
+ * site-wide one, which is the failure this whole function exists to avoid.
  */
 export function clientIp(request: Request, clientAddress?: string): string {
+  const cloudflare = request.headers.get("cf-connecting-ip");
+  if (cloudflare) return cloudflare.trim();
+
   if (clientAddress) return clientAddress;
 
   const forwarded = request.headers.get("x-forwarded-for");
