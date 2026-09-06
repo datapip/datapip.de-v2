@@ -1,5 +1,6 @@
 import { ui, type Locale } from "../i18n/ui";
 import { isMailConfigured, sendMail } from "./mailer";
+import { createRecord, FEEDBACK_COLLECTION } from "./pocketbase";
 
 export interface ContactValues {
   name: string;
@@ -20,6 +21,13 @@ export type ContactResult =
   | { status: "error"; errors: ContactErrors; values: ContactValues };
 
 const MIN_MESSAGE_LENGTH = 20;
+
+/**
+ * v1 tagged contact enquiries with this, which is what tells them apart from
+ * extension feedback in the same collection. Do not change it, or the history
+ * splits in two.
+ */
+const CONTACT_SOURCE = "datapip";
 
 /** Deliberately permissive: the only authority on an address is delivery. */
 function looksLikeEmail(value: string): boolean {
@@ -64,8 +72,8 @@ export async function handleContactSubmission(
     return { status: "error", errors: { form: t.errors.config }, values };
   }
 
-  try {
-    await sendMail({
+  const [mail, stored] = await Promise.allSettled([
+    sendMail({
       replyTo: `${values.name} <${values.email}>`,
       subject: values.subject
         ? `[datapip.de] ${values.subject}`
@@ -78,11 +86,47 @@ export async function handleContactSubmission(
         "",
         values.message,
       ].join("\n"),
-    });
+    }),
+    storeEnquiry(values),
+  ]);
 
-    return { status: "success" };
-  } catch (error) {
-    console.error("[contact] send failed:", error);
+  if (stored.status === "rejected") {
+    console.error("[contact] PocketBase write failed:", stored.reason);
+  }
+
+  /* What the visitor is told tracks the MAIL, not "either channel landed".
+     v1 returned success when either did, so with SMTP down a visitor saw
+     "sent" while the enquiry sat in a database nobody was watching. The row
+     exists for durability — so a failed send is recoverable instead of lost —
+     and durability is not the same thing as delivery. */
+  if (mail.status === "rejected") {
+    console.error("[contact] send failed:", mail.reason);
+    console.error(
+      stored.status === "fulfilled"
+        ? `[contact] the enquiry IS stored in "${FEEDBACK_COLLECTION}" and can be recovered from there`
+        : "[contact] BOTH channels failed — this enquiry is lost",
+    );
     return { status: "error", errors: { form: t.errors.send }, values };
   }
+
+  return { status: "success" };
+}
+
+/**
+ * The durable copy of an enquiry, in the collection v1 used.
+ *
+ * That collection has no subject field, so the subject rides at the top of
+ * the message rather than being dropped: this row is what survives a failed
+ * send, and it must not hold less than the email would have.
+ */
+async function storeEnquiry(values: ContactValues): Promise<void> {
+  await createRecord(FEEDBACK_COLLECTION, {
+    source: CONTACT_SOURCE,
+    name: values.name,
+    email: values.email,
+    message: values.subject
+      ? `${values.subject}\n\n${values.message}`
+      : values.message,
+    publish: false,
+  });
 }

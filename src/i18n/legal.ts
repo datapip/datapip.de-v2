@@ -7,10 +7,13 @@
  * binding content, so it is copied, never reworded or re-translated.
  *
  * The privacy text is deliberately NOT a verbatim port. v2's data flows are
- * not v1's: there is no PocketBase behind the contact form, the cookie
- * scanner is new, analytics moved to a client-side cookieless script, and
- * v1's two technical cookies no longer exist. Each section below describes
- * what this build actually does.
+ * not v1's: the cookie scanner is new, analytics moved to a client-side
+ * cookieless script, and v1's two technical cookies no longer exist. Each
+ * section below describes what this build actually does.
+ *
+ * The contact-form clause is load-bearing in the other direction: it names
+ * the PocketBase copy the form writes alongside the email. If that dual
+ * write is ever removed, this text has to go back with it.
  */
 
 import type { Locale } from "./ui";
@@ -120,7 +123,7 @@ export const legal = {
         {
           heading: "Kontaktformular",
           paragraphs: [
-            "Wenn Sie uns über das Kontaktformular eine Anfrage senden, werden Ihre Angaben (Name, E-Mail-Adresse, optionaler Betreff und Ihre Nachricht) ausschließlich per E-Mail an uns übermittelt und zur Bearbeitung Ihrer Anfrage verwendet. Eine Speicherung in einer Datenbank findet nicht statt; die Daten verbleiben in unserem E-Mail-Postfach, solange dies zur Bearbeitung erforderlich ist. Wir geben diese Daten nicht ohne Ihre Einwilligung weiter. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO (Vertragsanbahnung) oder lit. f (berechtigtes Interesse).",
+            "Wenn Sie uns über das Kontaktformular eine Anfrage senden, werden Ihre Angaben (Name, E-Mail-Adresse, optionaler Betreff und Ihre Nachricht) per E-Mail an uns übermittelt und zusätzlich in unserer Datenbank (PocketBase) gespeichert, damit keine Anfrage verloren geht, wenn der E-Mail-Versand fehlschlägt. Die Daten werden ausschließlich zur Bearbeitung Ihrer Anfrage verwendet und verbleiben in unserem E-Mail-Postfach und in der Datenbank, solange dies dafür erforderlich ist; anschließend löschen wir sie. Wir geben diese Daten nicht ohne Ihre Einwilligung weiter. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO (Vertragsanbahnung) oder lit. f (berechtigtes Interesse).",
           ],
         },
         {
@@ -245,7 +248,7 @@ export const legal = {
         {
           heading: "Contact Form",
           paragraphs: [
-            "If you send us an enquiry via the contact form, your details (name, email address, optional subject and your message) are transmitted to us by email only and used to process your enquiry. They are not written to a database; the data remains in our mailbox for as long as handling your request requires. We will not share this data without your consent. The legal basis is Art. 6 (1) (b) GDPR (contract initiation) or (f) (legitimate interest).",
+            "If you send us an enquiry via the contact form, your details (name, email address, optional subject and your message) are transmitted to us by email and additionally stored in our database (PocketBase), so that no enquiry is lost if the email fails to send. The data is used solely to process your enquiry and remains in our mailbox and in the database for as long as that requires; we delete it afterwards. We will not share this data without your consent. The legal basis is Art. 6 (1) (b) GDPR (contract initiation) or (f) (legitimate interest).",
           ],
         },
         {

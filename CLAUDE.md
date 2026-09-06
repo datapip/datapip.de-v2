@@ -79,6 +79,7 @@ src/
     is-public-url.ts SSRF guard — pre-flight only; callers re-check after redirects
     guards.ts        TTL cache, Playwright concurrency slots, and two separate
                      per-IP rate-limit buckets (scan, feedback)
+    pocketbase.ts    The one PocketBase writer — contact form and feedback
     escape-html.ts   The single XSS boundary for both tool panels
     scan-types.ts    Scan request/result types — imports nothing, so the client
                      scripts can share them without pulling in Playwright
@@ -295,7 +296,25 @@ v1 answered this from `app/api/feedback/route.tsx`, which wrote to PocketBase. v
 
 **Either channel landing counts as received, and that is deliberate.** The two run in parallel via `Promise.allSettled`; a partial failure is logged loudly but not reported to the sender. This is the opposite of the call the contact form makes, for a reason: there, "sent" while SMTP was down left an enquiry unread in a database nobody watched, whereas here PocketBase is the channel that *notifies*, so a stored row is a delivered message. Reporting failure would only make someone send their feedback twice.
 
-**This is the only place v2 uses PocketBase.** The contact form still emails and nothing else — see the backlog note, which is about that form, not this endpoint.
+**The contact form writes to the same collection**, tagged `source: "datapip"` exactly as v1 tagged it — but it reports success differently, and the difference is deliberate. See **The contact form is a dual write too**.
+
+### The contact form is a dual write too — with the opposite success rule
+
+Both senders write mail and a PocketBase row in parallel. They disagree on what counts as delivered, and that disagreement is the whole design:
+
+| | `/api/feedback` | Contact form |
+|---|---|---|
+| Success when | **either** channel lands | **the mail** lands |
+| Because | PocketBase notifies you, so a stored row genuinely is a delivered message | the row is a safety net nobody is watching in the moment; an enquiry that only got stored has not reached anyone yet |
+| A partial failure is | logged, never shown — reporting it would only make someone send twice | shown to the visitor, so they can retry or mail directly |
+
+v1 used the first rule for both, which is why the form was dishonest under partial failure: with SMTP down a visitor saw "sent" while the enquiry sat unread. **The point of the row is durability, not hiding a failed send** — so when the mail fails the log says explicitly whether the enquiry is recoverable from the database or genuinely lost, and the visitor still sees an error.
+
+Two details worth keeping:
+
+- **`source: "datapip"`** is v1's tag for contact enquiries, and it is what separates them from extension feedback in the shared collection. Changing it splits the history in two.
+- **The collection has no `subject` field**, so the subject is prepended to the message rather than dropped. The row is what survives a failed send; it must not carry less than the email would have.
+- **The write is capped at 5s** (`WRITE_TIMEOUT_MS` in `lib/pocketbase.ts`). The form awaits this alongside the mail, so an unreachable PocketBase would otherwise hold the visitor's POST open until the socket gave up — verified: a server that accepts the connection and never answers costs 5.0s, not a hang.
 
 ### Why the endpoint is open, and what actually protects it
 
@@ -396,7 +415,7 @@ v2's data flows are not v1's, and the policy describes v2. If any of this change
 
 | Clause | Why it differs from v1 |
 |---|---|
-| Contact form | No PocketBase in v2 — the enquiry is emailed and nothing else. v1 claimed storage. |
+| Contact form | Emailed **and** written to PocketBase, so a failed send does not lose the enquiry. The clause names the database — if the dual write is ever removed, this text goes back with it. |
 | Cookie scanner | New in v2. Declares server-side fetch, the 5-min result cache and the 10-min per-IP rate-limit hold — the retention numbers come straight from `src/lib/guards.ts`. |
 | Web analytics | Client-side cookieless Umami on the site's own subdomain; no consent gate, no § 25 TDDDG consent needed. v1 described its server-side tracking. |
 | Cookies | **v2 sets none at all.** v1's `verified` and `browserLanguage` cookies are both gone — server-side tracking was not ported, and `pages/index.astro` negotiates the locale from `Accept-Language` without writing anything. |
@@ -569,7 +588,6 @@ Why it was not worth its cost:
 
 ### Backlog — not scheduled
 
-- **PocketBase feedback storage.** v1's contact form dual-wrote: `components/contact/action.ts` (95 lines) called `sendMail()` and `storeDatabase()` in parallel and returned `success: mailSuccess || storeSuccess` — either channel landing counted as success. (`app/api/feedback/route.tsx` is a *different* endpoint, marked `// needed for browser extensions`, with `source`/`publish` fields the form never sent. Read `action.ts` for the dual-write logic, not that route.) v2 only emails, so a failed SMTP send loses the enquiry. But v1's version was dishonest under partial failure: with SMTP down the visitor saw "sent" while the enquiry sat unread in PocketBase. v2 returns a visible error instead, so the visitor knows to retry or mail directly. **If this is revived, keep the honest failure report** — the point would be durability, not hiding the failure.
 - **Light theme.** The token layer is ready; it is a second block in `global.css` plus a toggle. Only if asked for.
 - **Redis or similar for guard state.** Required before running more than one Node process — see the scanner section.
 - **Tests.** There are none. The highest-value first test is a contrast assertion over the `@theme` tokens, since that constraint is easy to break silently and `astro check` cannot catch it.

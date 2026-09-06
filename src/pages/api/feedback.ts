@@ -21,10 +21,9 @@ export const prerender = false;
 
 import type { APIRoute } from "astro";
 
-import { PB_ENDPOINT, PB_USER, PB_PASSWORD } from "astro:env/server";
-
 import { clientIp, withinFeedbackRateLimit } from "../../lib/guards";
 import { sendMail } from "../../lib/mailer";
+import { createRecord, FEEDBACK_COLLECTION } from "../../lib/pocketbase";
 
 interface Feedback {
   message: string;
@@ -114,16 +113,7 @@ async function mailFeedback(feedback: Feedback): Promise<void> {
 
 /** Same collection and field names v1 wrote, so existing rows stay uniform. */
 async function storeInPocketBase(feedback: Feedback): Promise<void> {
-  if (!PB_ENDPOINT || !PB_USER || !PB_PASSWORD) {
-    throw new Error("PocketBase is not configured");
-  }
-
-  const { default: PocketBase } = await import("pocketbase");
-  const pb = new PocketBase(PB_ENDPOINT);
-
-  await pb.collection("users").authWithPassword(PB_USER, PB_PASSWORD);
-
-  await pb.collection("feedback").create({
+  await createRecord(FEEDBACK_COLLECTION, {
     source: feedback.source,
     name: feedback.name,
     email: feedback.email,
