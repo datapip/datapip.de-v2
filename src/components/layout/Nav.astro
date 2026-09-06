@@ -254,3 +254,42 @@ const groups = t.nav.groups
     transition: transform 150ms ease;
   }
 </style>
+
+{/*
+  The one piece of JavaScript outside the two tools, and the reason for it:
+  a native <details> closes only when its own summary is clicked. Open
+  "Produkte", change your mind, click anywhere on the page — the panel stays
+  over the content, and on mobile the whole menu does. Escape does nothing
+  either. Both are what a person expects of a menu, and neither is reachable
+  from CSS.
+
+  is:inline on purpose: it stays in the document as a few hundred bytes
+  rather than becoming a fetched module, so the nav costs a request on no
+  page. It is also additive — with JS off the menus behave exactly as they
+  did before, which is why this is a script and not a rewrite.
+*/}
+<script is:inline>
+  (() => {
+    const openMenus = () => document.querySelectorAll("header details[open]");
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+
+      for (const menu of openMenus()) {
+        // Never strand focus on something that just became hidden — but do
+        // not steal it either if the person was somewhere else entirely.
+        const heldFocus = menu.contains(document.activeElement);
+        menu.open = false;
+        if (heldFocus) menu.querySelector("summary").focus();
+      }
+    });
+
+    // pointerdown, not click: the menu should be gone by the time whatever
+    // was underneath reacts.
+    document.addEventListener("pointerdown", (event) => {
+      for (const menu of openMenus()) {
+        if (!menu.contains(event.target)) menu.open = false;
+      }
+    });
+  })();
+</script>

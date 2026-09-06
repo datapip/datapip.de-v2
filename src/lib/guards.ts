@@ -30,8 +30,24 @@ export function getFromCache<T>(key: string): T | null {
   return entry.data as T;
 }
 
+/**
+ * Writes sweep the expired entries first.
+ *
+ * Reads already drop an entry they find stale, but a URL scanned once and
+ * never asked for again is never read, so nothing collected it — and a
+ * ScanResult is not small: up to 250 request objects carrying full,
+ * unclipped URLs plus 150 storage items. The map therefore grew for the life
+ * of the process. Sweeping here bounds it to the scans that started inside
+ * one TTL window, which the concurrency limit already caps.
+ */
 export function setInCache<T>(key: string, data: T): void {
-  cache.set(key, { data, expiry: Date.now() + CACHE_TTL_MS });
+  const now = Date.now();
+
+  for (const [existing, entry] of cache) {
+    if (now > entry.expiry) cache.delete(existing);
+  }
+
+  cache.set(key, { data, expiry: now + CACHE_TTL_MS });
 }
 
 /* --------------------------- Concurrency ------------------------------ */

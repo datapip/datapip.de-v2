@@ -24,7 +24,9 @@ const t = scanner[lang];
 /* Everything the client script needs to render, handed over as data so both
    locales share one bundle. */
 const strings = {
+  ready: t.form.ready,
   running: t.form.running,
+  done: t.form.done,
   submit: t.form.submit,
   result: t.result,
   consent: t.consent,
@@ -169,7 +171,10 @@ const fieldClass =
           error: "bg-crit",
         }[state]
       }`;
-      statusEl.textContent = state === "busy" ? s.running : "";
+      /* Every state says its name. The dot alone is aria-hidden, so a
+         blank label here left a screen reader with no completion signal at
+         all — while the hero panel announced one. */
+      statusEl.textContent = { ready: s.ready, busy: s.running, done: s.done, error: "" }[state];
     }
 
     /** Wide tables must be reachable by keyboard, not just by trackpad. */
@@ -187,7 +192,7 @@ const fieldClass =
       }
 
       const head = headers
-        .map((h) => `<th class="label whitespace-nowrap px-3 py-2 text-left font-normal text-fg-faint">${esc(h)}</th>`)
+        .map((h) => `<th scope="col" class="label whitespace-nowrap px-3 py-2 text-left font-normal text-fg-faint">${esc(h)}</th>`)
         .join("");
 
       const body = rows
@@ -325,7 +330,7 @@ const fieldClass =
                         ? `<p class="mt-4 text-[0.85rem] text-fg-muted">${esc(s.consent.noChange)}</p>`
                         : `<p class="label mt-6 text-fg-faint">${esc(s.consent.added)} (${data.consent.addedCookies.length})</p>
                            <div class="mt-3 border border-rule">${table(
-                             [cols.name, cols.value, cols.domain, cols.expiry, cols.type, ""],
+                             [cols.name, cols.value, cols.domain, cols.expiry, cols.type, cols.party],
                              cookieRows(data.consent.addedCookies),
                            )}</div>`
                     }`
@@ -345,7 +350,7 @@ const fieldClass =
         s.result.tables.cookies,
         data.cookieCount,
         table(
-          [cols.name, cols.value, cols.domain, cols.expiry, cols.type, ""],
+          [cols.name, cols.value, cols.domain, cols.expiry, cols.type, cols.party],
           cookieRows(data.cookies),
         ),
         !clean,
@@ -369,7 +374,7 @@ const fieldClass =
         s.result.tables.requests,
         data.requestCount,
         table(
-          [cols.url, cols.host, ""],
+          [cols.url, cols.host, cols.party],
           data.requests.map((r) => [
             wide(r.url),
             esc(r.host),

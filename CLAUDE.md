@@ -14,7 +14,7 @@
 - **Analytics:** self-hosted Umami, **client-side only** — cookieless, no consent gate, no middleware, no per-route allowlist (see Analytics)
 - **Sitemap:** `@astrojs/sitemap`, locale-aware
 
-Three pages ship JavaScript, all vanilla and all bundled by Vite: the homepage's ~3 KB scanner module, the cookie scanner report's ~2 KB gzipped module, and the de-coder's ~11 KB gzipped module (json5 + js-md5 dominate that one — see **The de-coder**). Every other page is zero-JS. Every page also loads the Umami script from the site's own subdomain. **No framework runtime ships anywhere.** Keep it that way: reach for an island only if a feature genuinely cannot be done in that budget, and prefer vanilla when it can.
+Three pages ship a JavaScript module, all vanilla and all bundled by Vite: the homepage's ~1.6 KB gzipped scanner, the cookie scanner report's ~2.3 KB gzipped module, and the de-coder's ~11 KB gzipped module (json5 + js-md5 dominate that one — see **The de-coder**). Every page additionally carries the nav's few hundred bytes of **inline** dismissal script (see **Navigation**) and the Umami tag from the site's own subdomain. **No framework runtime ships anywhere.** Keep it that way: reach for an island only if a feature genuinely cannot be done in that budget, and prefer vanilla when it can.
 
 ## Commands
 
@@ -259,9 +259,11 @@ This is the most reachable endpoint on the site, so it is guarded on four axes, 
 | SSRF (`isPublicUrl`) | rejects non-http(s), loopback, RFC1918, link-local, unique-local | 400 `private` |
 | Concurrency | max 2 Playwright jobs | 503 `busy` |
 | Rate limit | 5 scans / 10 min / IP | 429 `limit` |
-| Cache | 5 min TTL per url **and** selector, checked *before* the rate limit | — |
+| Cache | 5 min TTL per url **and** selector, checked *before* the rate limit; **writes sweep the expired entries** | — |
 
 **Do not remove or loosen any of these.** Rate limiting keys off `cf-connecting-ip`, never a shared fallback constant — a shared key turns the per-IP limit into a site-wide one. Why that header and not `clientAddress`: see **Behind Cloudflare and Coolify**.
+
+The cache sweeps on write, and that is not tidiness. A read drops an entry it finds stale, but a URL scanned once and never asked for again is never read, so nothing collected it — and a `ScanResult` carries up to 250 request objects with full, unclipped URLs. The map grew for the life of the process. Sweeping on write bounds it to the scans that started inside one TTL window, which the concurrency limit already caps.
 
 All guard state is per-process. If this is ever scaled past one Node process, the cache, slots and limits become per-instance — revisit before adding a replica.
 
@@ -486,6 +488,8 @@ v1 filed all five under a single "Produkte" menu, which advertised free tools as
 - Both dropdowns are `<details>` with a shared `name`, which makes them an **exclusive accordion**: opening one closes the other, no JavaScript. Browsers without that support just allow both open — harmless.
 - On mobile the groups are flattened into labelled sections inside the existing menu rather than nested disclosures, so a tool is never two taps away.
 - Product paths come from `products.ts`, tool paths from `routes`; `Nav.astro` only joins them, so no slug is restated and none can drift.
+
+**The menus are dismissible, and that costs a script.** A native `<details>` closes only when its own summary is clicked, so an open dropdown sat over the page after a click anywhere else, and Escape did nothing — on mobile that was the whole menu. Neither is reachable from CSS. `Nav.astro` therefore carries an `is:inline` handler for Escape and outside-pointerdown: a few hundred bytes that stay in the document rather than becoming a fetched module, on every page. It is **additive** — with JS off the menus behave exactly as they did before, which is why it is a script and not a rewrite. Escape returns focus to the summary, but only when focus was inside the menu it just closed.
 
 **`ready: false` hides an entry whose page does not exist yet.** Nothing sets it any more — every tool in the menu is built — but the mechanism stays: flip a flag in the same change that adds the page, never before. A nav link to a 404 is worse than no link.
 

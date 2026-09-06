@@ -43,7 +43,9 @@ export const scanner = {
       ],
       selectorPlaceholder: "button#accept-all",
       submit: "Prüfung starten",
+      ready: "Bereit",
       running: "Prüft …",
+      done: "Geprüft",
       runningHint: "Dies kann bis zu einer Minute dauern.",
     },
 
@@ -79,6 +81,8 @@ export const scanner = {
         frame: "Frame",
         url: "URL",
         host: "Host",
+        /** Heads the first/third-party column. It had no header at all. */
+        party: "Herkunft",
       },
       party: { first: "First-Party", third: "Drittanbieter" },
       source: { http: "HTTP", js: "JS" },
@@ -179,7 +183,9 @@ export const scanner = {
       ],
       selectorPlaceholder: "button#accept-all",
       submit: "Start scan",
+      ready: "Ready",
       running: "Scanning …",
+      done: "Scanned",
       runningHint: "This may take up to a minute.",
     },
 
@@ -215,6 +221,8 @@ export const scanner = {
         frame: "Frame",
         url: "URL",
         host: "Host",
+        /** Heads the first/third-party column. It had no header at all. */
+        party: "Origin",
       },
       party: { first: "first-party", third: "third-party" },
       source: { http: "HTTP", js: "JS" },
